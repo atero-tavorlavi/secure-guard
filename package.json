@@ -1,0 +1,20 @@
+{
+  "name": "secure-guard",
+  "version": "1.0.0",
+  "description": "OpenCode prompt-injection guard plugin — scans prompts, model turns, and tool outputs for injection attacks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scanner": "bun run prompt-guard-mock.ts",
+    "scanner:dev": "bun --watch run prompt-guard-mock.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "latest",
+    "@opencode-ai/sdk": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "@types/bun": "latest"
+  }
+}
