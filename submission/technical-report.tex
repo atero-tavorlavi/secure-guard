@@ -188,11 +188,11 @@ Secure Guard shows that a small, local and calibrated decision model can sit in 
 \textbf{Reut} designed the user-study protocol.
 
 \section{LLM Statement}
-We used Claude Code, an AI coding agent, throughout the project, under the supervision of a team member who approved every design decision. The agent followed a written process: a design specification, an implementation plan with test-first tasks, implementation by sub-agents and an independent review of every task before the next one started.
+We used several AI tools during the project, including Claude (through Claude Code), Gemini and Antigravity. We did our own research and made the decisions ourselves: the threat model, the choice of LAYA over a generative judge, the system design and the evaluation. We used AI mostly to implement code and to help with writing this report and the user-study protocol.
 
-\textbf{What worked well.} The independent reviews caught real defects before they shipped. Among them were several paths where a flagged or unscanned tool call could still run, such as scanner errors treated as an unreachable scanner under the fail-open policy, an automatic answer to permission prompts that ignored flagged calls and an API token served to any local process. A browser check found two dashboard bugs. Short feasibility experiments replaced assumptions with measurements. They showed, for example, that OpenCode never calls the permission hook our first design relied on, and that the first threshold, tuned on synthetic data, flagged most real benign calls.
+\textbf{What worked well.} AI reviews of each piece of code caught real defects before they shipped, including paths where a flagged tool call could still run. Short experiments run with the agents replaced our assumptions with measurements.
 
-\textbf{What worked less well.} The first plan relied on an API that does not work. A threshold chosen on synthetic samples did not hold up in real use. Running several models at the same time froze the laptop once, and after that every heavy job ran under a memory watchdog, one model at a time. We also used the agent to draft this report and the user-study protocol. All numbers come from our logged runs, and the team is responsible for the correctness and originality of the implementation and the report.
+\textbf{What worked less well.} Some plans relied on APIs that turned out not to work, a threshold chosen on synthetic samples did not hold up in real use, and running several models at once froze a laptop. All numbers come from our own logged runs, and we take full responsibility for the correctness and originality of the implementation and the report.
 
 \begin{thebibliography}{99}
 \bibitem{opencode} OpenCode: an open-source AI coding agent. \url{https://github.com/sst/opencode}, 2026.
