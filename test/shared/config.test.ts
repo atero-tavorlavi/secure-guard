@@ -51,12 +51,12 @@ describe("mergeConfig", () => {
     expect(() => mergeConfig(DEFAULTS, patch)).toThrow(message)
   })
 
-  test("defaults: threshold 0.45, native prompt on, only tool calls checked, 3 context turns", () => {
-    expect(DEFAULTS.threshold).toBe(0.45)
+  test("defaults: threshold 0.29, native prompt on, only tool calls checked, 0 context turns", () => {
+    expect(DEFAULTS.threshold).toBe(0.29)
     expect(DEFAULTS.nativePrompt).toBe(true)
     expect(DEFAULTS.checkPrompts).toBe(false)
     expect(DEFAULTS.checkToolOutputs).toBe(false)
-    expect(DEFAULTS.contextTurns).toBe(3)
+    expect(DEFAULTS.contextTurns).toBe(0)
   })
 
   test("accepts the new check settings", () => {

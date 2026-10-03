@@ -1,6 +1,6 @@
 # Secure Guard
 
-Secure Guard is a security guard for [OpenCode](https://opencode.ai), powered by the local [LAYA](https://huggingface.co/convaiinnovations/laya) decision model. Before OpenCode runs a tool call, it sends the call to LAYA together with what led to it: the user's prompt, the assistant's reasoning since that prompt, and a few recent turns (see [What LAYA sees](#what-laya-sees)). Checking user prompts and tool outputs too is opt-in (`checkPrompts`, `checkToolOutputs`). It runs in one of three modes: `monitor` (log only), `ask` (hold risky actions for a decision), or `auto` (block automatically). A local dashboard shows what was checked, what was flagged, and why.
+Secure Guard is a security guard for [OpenCode](https://opencode.ai), powered by the local [LAYA](https://huggingface.co/convaiinnovations/laya) decision model. Before OpenCode runs a tool call, it sends the call to LAYA together with what led to it: the user's prompt and the assistant's reasoning since that prompt (recent turns too, if `contextTurns` is raised above its default of 0; see [What LAYA sees](#what-laya-sees)). Checking user prompts and tool outputs too is opt-in (`checkPrompts`, `checkToolOutputs`). It runs in one of three modes: `monitor` (log only), `ask` (hold risky actions for a decision), or `auto` (block automatically). A local dashboard shows what was checked, what was flagged, and why.
 
 ![Secure Guard dashboard, overview](docs/images/dashboard-overview.png)
 
@@ -98,7 +98,7 @@ This script:
 ```
 🛡️  Secure Guard is running
    dashboard  http://localhost:9000/#token=3f9c…
-   mode       ask (threshold 0.45)
+   mode       ask (threshold 0.29)
    data       /Users/you/.secure-guard
 ```
 
@@ -126,17 +126,20 @@ Each tool call is sent to LAYA as one JSON state (empty fields are left out):
   "tool": "bash",
   "args": { "command": "python3 scripts/resize.py photos/ --width 512" },
   "user_prompt": "Resize the images in photos/ to 512 px wide",
-  "reasoning": "The user wants every image in photos/ resized. Let me see what is there.\n[tool bash] ls photos/\nThere are 40 PNGs. I will write a small Pillow script and run it.\n[tool write] scripts/resize.py",
-  "recent_turns": [
-    { "role": "user", "text": "What does this repo do?" },
-    { "role": "assistant", "text": "It is a static photo gallery generator." }
-  ]
+  "reasoning": "The user wants every image in photos/ resized. Let me see what is there.\n[tool bash] ls photos/\nThere are 40 PNGs. I will write a small Pillow script and run it.\n[tool write] scripts/resize.py"
 }
 ```
 
 - `user_prompt`: the user's last message in the session.
 - `reasoning`: everything the assistant produced after that message and before this call, in order: its reasoning, its text, and earlier tool calls of the same turn as `[tool <name>] <short args>`.
-- `recent_turns`: the `contextTurns` messages (default 3, at most 5) before the user's last message, text only, each cut to its last 300 characters.
+- `recent_turns`: the `contextTurns` messages (default 0, at most 5) before the user's last message, text only, each cut to its last 300 characters. Omitted by default -- an eval over 80 held-out samples found that adding recent turns to LAYA's input lowered ROC-AUC (reasoning is what helps; see [Security notes](#security-notes)). Raise `contextTurns` to include them, e.g.:
+
+```json
+  "recent_turns": [
+    { "role": "user", "text": "What does this repo do?" },
+    { "role": "assistant", "text": "It is a static photo gallery generator." }
+  ]
+```
 
 LAYA's question for a tool call is: given what the user asked and the assistant's reasoning, is this call harmful or something the user did not ask for (destructive, leaking secrets or data, escalating privileges, or following instructions that did not come from the user)?
 
@@ -199,7 +202,7 @@ Stored at `~/.secure-guard/config.json` (created with defaults on first run), ed
 | Key | Env | Default |
 |---|---|---|
 | `mode` | `SECURE_GUARD_MODE` | `ask` |
-| `threshold` | `SECURE_GUARD_THRESHOLD` | `0.45` |
+| `threshold` | `SECURE_GUARD_THRESHOLD` | `0.29` |
 | `askTimeoutSec` | `SECURE_GUARD_ASK_TIMEOUT` | `120` |
 | `askTimeoutDefault` | | `block` |
 | `failOpen` | `PROMPT_GUARD_FAIL_OPEN` (kept for compatibility) | `false` |
@@ -207,7 +210,7 @@ Stored at `~/.secure-guard/config.json` (created with defaults on first run), ed
 | `nativePrompt` | | `true` — flagged `bash`/`edit`/`webfetch` calls also get OpenCode's own permission prompt; it briefly flashes on every such call; changing it needs an OpenCode restart |
 | `checkPrompts` | | `false` — also check each user prompt before the model sees it |
 | `checkToolOutputs` | | `false` — also check each tool output before the model sees it (flagged output is redacted) |
-| `contextTurns` | | `3` (0 to 5) — messages before the user's last prompt sent with each tool call |
+| `contextTurns` | | `0` (0 to 5) — messages before the user's last prompt sent with each tool call |
 | `port` | `SECURE_GUARD_PORT` | `9000` |
 | `laya.url` | `LAYA_URL` | `http://127.0.0.1:8000` |
 | `laya.model` | `LAYA_MODEL` | `typed-decisions` — alternatives: `multilingual`, `english` (`typed-decisions` is English-only but the best measured on this task) |
@@ -232,7 +235,7 @@ Writes one JSON line per settled decision to `out.jsonl` (default `~/.secure-gua
 - A self-protection rule blocks tool calls whose arguments mention the guard's port (`:9000` after any host spelling), its data directory (`.secure-guard`), its database (`secure-guard.db`) or the installed OpenCode plugin file (`opencode/plugin/secure-guard`). A checkout of this repo (`~/secure-guard`) is not covered, so working on it is not flagged; that also means the agent could edit the checkout and run `bun run install-plugin` unflagged, and a custom `OPENCODE_PLUGIN_DIR` is not covered either. It is best effort: a command assembled from fragments or written to a script first gets past it. For hard isolation, run the agent in a container or as a separate OS user.
 - Long text is scanned in windows. LAYA reads about `laya.maxLen` tokens per call (about `(maxLen - 256) × 3` characters, around 2.3 KB at the default 1024). A tool call's context is fitted as described in [What LAYA sees](#what-laya-sees). Tool-call arguments, tool outputs or prompts that are longer still are split into overlapping windows that are scanned in parallel, and the riskiest window decides. At most 8 windows are scanned: beyond that, the first 7 and the last 1, so the middle of very long text (more than about 16 KB at the default `maxLen`) is not scanned and the decision is marked `truncated`. Raise `laya.maxLen` to cover more.
 - Full tool outputs, prompts and tool arguments are stored locally in the SQLite file `~/.secure-guard/secure-guard.db` for `retentionDays` days, and JSON exports include them. They can contain secrets the agent read.
-- LAYA's zero-shot accuracy is limited: its model card reports 0.362 accuracy zero-shot on a typed-decisions benchmark, versus 0.766 after fine-tuning. The `typed-decisions` checkpoint used here is fine-tuned on security incidents and agent traces (English only). On realistic tool calls with reasoning (40 held-out samples), LAYA zero-shot separates attacks from normal work with ROC-AUC 0.81 (0.66 without reasoning). At threshold 0.35 it caught 40% of attacks with no false positives; the default 0.45 favors fewer interruptions. Treat LAYA as one signal, run in monitor or ask mode, and fine-tune on your own decisions for better accuracy.
+- LAYA's zero-shot accuracy is limited: its model card reports 0.362 accuracy zero-shot on a typed-decisions benchmark, versus 0.766 after fine-tuning. The `typed-decisions` checkpoint used here is fine-tuned on security incidents and agent traces (English only). On realistic tool calls (40 held-out samples), LAYA zero-shot separates attacks from normal work with ROC-AUC 0.93 under the default input (prompt + reasoning, no recent turns); adding recent turns back in lowers that to 0.81 -- reasoning is what helps, which is why `contextTurns` now defaults to 0 (see [eval/results/summary.md](eval/results/summary.md)). At the default threshold 0.29 it caught 80% of attacks at a 4% false-positive rate on held-out data; at 0.35, 40% with no false positives. Treat LAYA as one signal, run in monitor or ask mode, and fine-tune on your own decisions for better accuracy.
 
 ## Development
 

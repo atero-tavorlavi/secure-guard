@@ -160,7 +160,7 @@ test("status reports mode, LAYA and session counts", async () => {
   await guard.check(toolCall)
   expect(guard.status("s1")).toEqual({
     mode: "ask",
-    threshold: 0.45,
+    threshold: 0.29,
     laya: { ok: true, url: "http://127.0.0.1:8000", model: "typed-decisions" },
     counts: { checked: 1, blocked: 0, pending: 0 },
   })

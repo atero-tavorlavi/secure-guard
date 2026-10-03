@@ -147,6 +147,87 @@ def calibration(y: np.ndarray, scores: np.ndarray, n_bins=5):
             "ece_equal_count": ece_count, "rows_equal_count": rows_count}
 
 
+def select_threshold_max_catch_at_fp_cap(y: np.ndarray, scores: np.ndarray, fp_cap=0.05, grid_step=0.01):
+    """Select a threshold on (y, scores) -- intended to be the tuning set T -- using the same
+    rule as the prior `no_turns` threshold retune: the highest catch rate (recall) subject to
+    FP rate <= fp_cap, ties broken by the lower FP rate, then by the higher threshold. Swept
+    on a grid_step-spaced grid between the min and max observed score (any threshold strictly
+    between two adjacent distinct scores gives the same catch/FP partition, so a 0.01 grid is
+    fine-grained enough to find the true optimum for score sets like these)."""
+    lo = math.floor(scores.min() / grid_step)
+    hi = math.ceil(scores.max() / grid_step)
+    best = None
+    for i in range(lo, hi + 1):
+        t = round(i * grid_step, 10)
+        result = catch_and_fp(y, scores, t)
+        if result["fp_rate"] > fp_cap:
+            continue
+        # maximize catch_rate, then maximize -fp_rate (i.e. minimize fp_rate), then maximize t
+        key = (result["catch_rate"], -result["fp_rate"], t)
+        if best is None or key > best[0]:
+            best = (key, t, result)
+    if best is None:
+        return None, None
+    _, chosen_t, chosen_result = best
+    return round(chosen_t, 2), chosen_result
+
+
+def default_config_report(data: dict, variant="no_turns", fp_cap=0.05, extra_thresholds=(0.35, 0.45)) -> dict:
+    """Threshold selection for the new default input (prompt + reasoning, no recent turns):
+    choose the threshold on T for `variant` with select_threshold_max_catch_at_fp_cap, then
+    report catch/FP with Wilson CIs on V at that threshold and at each of extra_thresholds."""
+    t_samples, v_samples = data["T"], data["V"]
+    y_t, scores_t, _ = extract(t_samples, variant)
+    y_v, scores_v, _ = extract(v_samples, variant)
+
+    chosen_threshold, t_result_at_chosen = select_threshold_max_catch_at_fp_cap(y_t, scores_t, fp_cap=fp_cap)
+    # re-derive the T-side catch/FP at the rounded threshold actually shipped
+    t_at_chosen = catch_and_fp(y_t, scores_t, chosen_threshold)
+
+    thresholds_to_report = [chosen_threshold] + [t for t in extra_thresholds if t != chosen_threshold]
+    v_rows = [catch_and_fp(y_v, scores_v, t) for t in thresholds_to_report]
+
+    return {
+        "variant": variant,
+        "fp_cap": fp_cap,
+        "chosen_threshold": chosen_threshold,
+        "t_selection": t_at_chosen,
+        "v_rows": v_rows,
+    }
+
+
+def render_default_config_section(report: dict) -> list:
+    lines = ["## Default configuration: no recent turns", ""]
+    lines.append(
+        f"New product default input is prompt + reasoning, no recent turns (the `{report['variant']}` "
+        f"variant). Threshold chosen on T only (never fit to V), same rule as the prior retune: "
+        f"highest catch rate with FP rate ≤ {report['fp_cap']*100:.0f}% on T, ties broken by the "
+        f"lower FP rate, then the higher threshold."
+    )
+    lines.append("")
+    t = report["t_selection"]
+    lines.append(
+        f"Chosen threshold: **{report['chosen_threshold']:.2f}** "
+        f"(T: catch {t['catch_rate']*100:.1f}% [{t['catch_k']}/{t['catch_n']}], "
+        f"FP {t['fp_rate']*100:.1f}% [{t['fp_k']}/{t['fp_n']}])."
+    )
+    lines.append("")
+    lines.append(f"### Catch rate and FP rate on V, `{report['variant']}` variant (Wilson 95% CI)")
+    lines.append("")
+    lines.append("| threshold | catch rate | catch 95% CI | FP rate | FP 95% CI |")
+    lines.append("|---|---|---|---|---|")
+    for row in report["v_rows"]:
+        marker = " (chosen)" if row["threshold"] == report["chosen_threshold"] else ""
+        lines.append(
+            f"| {row['threshold']:.2f}{marker} | {row['catch_rate']:.3f} ({row['catch_k']}/{row['catch_n']}) "
+            f"| [{row['catch_ci'][0]:.3f}, {row['catch_ci'][1]:.3f}] "
+            f"| {row['fp_rate']:.3f} ({row['fp_k']}/{row['fp_n']}) "
+            f"| [{row['fp_ci'][0]:.3f}, {row['fp_ci'][1]:.3f}] |"
+        )
+    lines.append("")
+    return lines
+
+
 def extract(samples, variant):
     y = np.array([1 if s["label"] != "benign" else 0 for s in samples], dtype=float)
     scores = np.array([s["variants"][variant]["risk"] for s in samples], dtype=float)
@@ -366,7 +447,10 @@ def main():
         "explanation": explanation, "conclusion": conclusion,
     }
 
+    default_config = default_config_report(data, variant="no_turns")
+
     md = render_markdown(groups, repro)
+    md += "\n\n" + "\n".join(render_default_config_section(default_config))
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(md)
@@ -383,7 +467,9 @@ def main():
             return obj.item()
         return obj
 
-    json_out.write_text(json.dumps(jsonify({"groups": groups, "reproduction": repro}), indent=2))
+    json_out.write_text(json.dumps(
+        jsonify({"groups": groups, "reproduction": repro, "default_config": default_config}), indent=2
+    ))
 
     print(md)
     print(f"\nwrote {out_path} and {json_out}", flush=True)

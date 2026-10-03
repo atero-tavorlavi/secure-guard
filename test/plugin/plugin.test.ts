@@ -354,7 +354,7 @@ describe("slash commands", () => {
   }
 
   test("/guard shows status", async () => {
-    expect(await run("guard")).toMatch(/^Secure Guard: mode ask · threshold 0\.45 · LAYA (ready|unknown)/)
+    expect(await run("guard")).toMatch(/^Secure Guard: mode ask · threshold 0\.29 · LAYA (ready|unknown)/)
   })
 
   test("/guard-mode changes the scanner mode", async () => {

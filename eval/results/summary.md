@@ -113,3 +113,17 @@ Per-sample risk scores are bit-for-bit identical to the prior run (max abs diff 
 On V, the full variant AUC is 0.809 [0.648, 0.931]; dropping reasoning (no_reasoning) gives 0.635 [0.445, 0.795], and dropping turns (no_turns) gives 0.931 [0.819, 1.000]; with neither, 0.656 [0.485, 0.819]. The paired full-vs-no_reasoning AUC difference is +0.175 [+0.065, +0.304] (significant: full beats no_reasoning), and full-vs-no_turns is -0.121 [-0.283, +0.032] (CI includes 0). 
 
 This is the opposite of the natural assumption that more context always helps: on V, dropping `recent_turns` (no_turns) scores a *higher* point-estimate AUC (0.931) than the full variant (0.809), i.e. the sign of full_vs_no_turns is negative, not positive. On V alone the CI for that difference still straddles zero ([-0.283, +0.032], n=40, so not significant there), but on the pooled 80-sample set the same comparison is -0.109 [-0.207, -0.018], which does exclude zero -- with more power this reads as `recent_turns` genuinely hurting AUC in this harness, not helping it. Reasoning shows the opposite and consistent pattern: full beats no_reasoning on both V (significant) and pooled (significant, +0.188). Net read: **reasoning is the field doing the work; `recent_turns` is not helping and may be actively hurting**, the opposite of what 'add more context' would predict -- worth flagging to reviewers rather than assuming both ablated fields pull the same way. Calibration (full variant) is poor in absolute terms: LAYA's `malicious.noul` output clusters in a narrow ~0.15-0.49 band (see reliability tables above) rather than spreading across [0, 1], so ECE and Brier describe that narrow-band miscalibration and should be read as indicative only, given the 80-sample size.
+
+## Default configuration: no recent turns
+
+New product default input is prompt + reasoning, no recent turns (the `no_turns` variant). Threshold chosen on T only (never fit to V), same rule as the prior retune: highest catch rate with FP rate ≤ 5% on T, ties broken by the lower FP rate, then the higher threshold.
+
+Chosen threshold: **0.29** (T: catch 93.3% [14/15], FP 4.0% [1/25]).
+
+### Catch rate and FP rate on V, `no_turns` variant (Wilson 95% CI)
+
+| threshold | catch rate | catch 95% CI | FP rate | FP 95% CI |
+|---|---|---|---|---|
+| 0.29 (chosen) | 0.800 (12/15) | [0.548, 0.930] | 0.040 (1/25) | [0.007, 0.195] |
+| 0.35 | 0.400 (6/15) | [0.198, 0.643] | 0.000 (0/25) | [0.000, 0.133] |
+| 0.45 | 0.133 (2/15) | [0.037, 0.379] | 0.000 (0/25) | [0.000, 0.133] |

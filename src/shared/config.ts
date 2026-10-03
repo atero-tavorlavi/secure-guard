@@ -21,7 +21,7 @@ export interface GuardConfig {
 
 export const DEFAULTS: GuardConfig = Object.freeze({
   mode: "ask",
-  threshold: 0.45,
+  threshold: 0.29,
   askTimeoutSec: 120,
   askTimeoutDefault: "block",
   failOpen: false,
@@ -29,7 +29,7 @@ export const DEFAULTS: GuardConfig = Object.freeze({
   nativePrompt: true,
   checkPrompts: false,
   checkToolOutputs: false,
-  contextTurns: 3,
+  contextTurns: 0,
   port: 9000,
   retentionDays: 30,
   laya: Object.freeze({ url: "http://127.0.0.1:8000", model: "typed-decisions", maxLen: 1024, timeoutMs: 2000 }),
