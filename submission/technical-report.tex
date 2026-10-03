@@ -12,10 +12,10 @@
 
 \title{Secure Guard: A Local, Calibrated Defense Against Prompt Injection in AI Coding Agents}
 
+\author{Tavor}
+\author{Yahli}
 \author{Soof}
 \author{Reut}
-\author{Yahli}
-\author{Tavor}
 \affiliation{\institution{Institution: fill in}\country{}}
 
 \begin{abstract}
@@ -39,6 +39,9 @@ This report makes four contributions. We describe the design and implementation 
 \textbf{Defenses.} Prompt-level defenses such as spotlighting mark untrusted content so the model can tell it apart from instructions~\cite{hines2024spotlighting}. Classifier-based guards screen inputs or outputs. Llama Guard classifies prompts and responses against a safety taxonomy~\cite{inan2023llamaguard}, and Prompt Guard detects jailbreak and injection strings in inputs~\cite{wan2024cyberseceval3}. These guards look at text before it reaches the model. Secure Guard judges the agent's actions instead, in the context of what the user asked and why the agent decided to act. This also catches attacks whose payload never appears word for word in the input.
 
 \textbf{Calibrated decisions.} Modern neural networks tend to be over-confident~\cite{guo2017calibration}. LAYA is trained with reinforcement learning against strictly proper scoring rules~\cite{gneiting2007}, which reward honest probabilities~\cite{laya}. Calibration matters for a guard because users act on a threshold.
+
+\section{Attacks}\label{sec:attacks}
+\pending{Soof: describe the attacks. Suggested outline: the threat model (who controls the image or page, what the agent can do), each attack family used in the dataset (secret key, forbidden topic as a phrase or an empty numbered list, CAPTCHA, and the benign controls) with one example image and prompt, how the images and prompts were found and labeled, and the MIPS attack: what it is, how it was attempted and why hardware limits stopped it.}
 
 \section{System Design}
 \begin{figure}[t]
@@ -87,7 +90,7 @@ We ask three questions. The first is a yes or no question: ``Given what the user
 Secure Guard is written in TypeScript on the Bun runtime. It was built test first in thirteen planned tasks and a few follow-ups. Every task was reviewed independently for compliance with the specification and for code quality, and the whole system had a final review. The suite has 243 automated tests, including tests against a fake LAYA server and a fake OpenCode client, and an optional end-to-end test against a real LAYA server.
 
 \subsection{First Approach: A Generative Judge}
-Our first judge was generative. We took Qwen3.5-2B and fine-tuned it to read a trace (system prompt, user prompt, chat history, model reasoning and tool call with the image text) and reply with a JSON verdict, \texttt{\{"verdict": "allow"\}} or \texttt{\{"verdict": "deny", "reason": "..."\}}. The training set had 100 labeled traces from four attack families, 81 labeled allow and 19 labeled deny. We trained it with LoRA~\cite{hu2022lora} using Apple's MLX framework on a MacBook, so the whole process ran locally. LoRA freezes the base weights and learns small low-rank matrices next to the attention and projection layers, which keeps memory low enough for a laptop. After training we merged the adapters into the base weights to get a single model, and we also converted it to MLX format for fast inference.
+Our first judge was generative. We took Qwen3.5-2B and fine-tuned it to read a trace (system prompt, user prompt, chat history, model reasoning and tool call with the image text) and reply with a JSON verdict, \texttt{\{"verdict": "allow"\}} or \texttt{\{"verdict": "deny", "reason": "..."\}}. The training set had 100 traces built from real images and prompts and labeled by hand (Section~\ref{sec:attacks}), 81 labeled allow and 19 labeled deny. We trained it with LoRA~\cite{hu2022lora} using Apple's MLX framework on a MacBook, so the whole process ran locally. LoRA freezes the base weights and learns small low-rank matrices next to the attention and projection layers, which keeps memory low enough for a laptop. After training we merged the adapters into the base weights to get a single model, and we also converted it to MLX format for fast inference.
 
 The generative judge has two drawbacks for a guard that runs on every call. Producing a verdict takes 0.2 to 0.4 seconds per trace and about 4 GB of memory, and its output is text, so a probability has to be extracted from the token scores of the verdict and is not calibrated by training. These drawbacks led us to LAYA.
 
@@ -179,7 +182,10 @@ In a pilot of 77 generated traces, the answering model followed the injection in
 Secure Guard shows that a small, local and calibrated decision model can sit in front of every action an AI coding agent takes, at a cost of about a tenth of a second per call, and that the agent's reasoning is the most valuable context for judging those actions. Accuracy on realistic calls is not yet high enough for fully automatic blocking, which is why the default mode asks the user. The guard's own decision log provides the data to close that gap.
 
 \section{Contributions}
-\pending{each team member's contributions: Soof, Reut, Yahli, Tavor.}
+\textbf{Tavor} trained the first judge, Qwen3.5-2B fine-tuned with LoRA in MLX on a laptop, then looked for a more efficient approach and found LAYA. He integrated LAYA with the OpenCode extension, built the scanner and dashboard and ran the evaluations.
+\textbf{Yahli} created the OpenCode plugin, including exporting the user's prompt and the agent's reasoning trace to the scanner.
+\textbf{Soof} created the training dataset by finding images and prompts and labeling them by hand. He also worked on a MIPS attack, which could not be completed because of hardware limitations.
+\textbf{Reut} designed the user-study protocol.
 
 \section{LLM Statement}
 We used Claude Code, an AI coding agent, throughout the project, under the supervision of a team member who approved every design decision. The agent followed a written process: a design specification, an implementation plan with test-first tasks, implementation by sub-agents and an independent review of every task before the next one started.
