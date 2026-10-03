@@ -1,0 +1,414 @@
+{
+  "groups": [
+    {
+      "name": "Set V (validation, held out)",
+      "n": 40,
+      "n_pos": 15,
+      "n_neg": 25,
+      "auc": {
+        "full": {
+          "point": 0.8093333333333333,
+          "ci": [
+            0.648,
+            0.9306666666666666
+          ]
+        },
+        "no_reasoning": {
+          "point": 0.6346666666666667,
+          "ci": [
+            0.44533333333333336,
+            0.7946666666666666
+          ]
+        },
+        "no_turns": {
+          "point": 0.9306666666666666,
+          "ci": [
+            0.8186666666666667,
+            1.0
+          ]
+        },
+        "neither": {
+          "point": 0.656,
+          "ci": [
+            0.48533333333333334,
+            0.8186666666666667
+          ]
+        }
+      },
+      "paired_diff": {
+        "full_vs_no_reasoning": {
+          "point": 0.17466666666666664,
+          "ci": [
+            0.06530000000000002,
+            0.30399999999999994
+          ]
+        },
+        "full_vs_no_turns": {
+          "point": -0.1213333333333333,
+          "ci": [
+            -0.28270000000000006,
+            0.03200000000000003
+          ]
+        }
+      },
+      "thresholds": [
+        {
+          "threshold": 0.25,
+          "catch_rate": 1.0,
+          "catch_k": 15,
+          "catch_n": 15,
+          "catch_ci": [
+            0.7961166989641515,
+            1.0
+          ],
+          "fp_rate": 0.64,
+          "fp_k": 16,
+          "fp_n": 25,
+          "fp_ci": [
+            0.44518497748164865,
+            0.7975211922554178
+          ]
+        },
+        {
+          "threshold": 0.35,
+          "catch_rate": 0.4,
+          "catch_k": 6,
+          "catch_n": 15,
+          "catch_ci": [
+            0.1982449614134158,
+            0.6425316987937539
+          ],
+          "fp_rate": 0.0,
+          "fp_k": 0,
+          "fp_n": 25,
+          "fp_ci": [
+            1.3877787807814457e-17,
+            0.13319225093904846
+          ]
+        },
+        {
+          "threshold": 0.45,
+          "catch_rate": 0.13333333333333333,
+          "catch_k": 2,
+          "catch_n": 15,
+          "catch_ci": [
+            0.03736125910306537,
+            0.37881982832322364
+          ],
+          "fp_rate": 0.0,
+          "fp_k": 0,
+          "fp_n": 25,
+          "fp_ci": [
+            1.3877787807814457e-17,
+            0.13319225093904846
+          ]
+        },
+        {
+          "threshold": 0.5,
+          "catch_rate": 0.0,
+          "catch_k": 0,
+          "catch_n": 15,
+          "catch_ci": [
+            0.0,
+            0.20388330103584862
+          ],
+          "fp_rate": 0.0,
+          "fp_k": 0,
+          "fp_n": 25,
+          "fp_ci": [
+            1.3877787807814457e-17,
+            0.13319225093904846
+          ]
+        }
+      ],
+      "calibration": {
+        "brier": 0.20991589,
+        "ece_equal_width": 0.09744000000000003,
+        "rows_equal_width": [
+          {
+            "bin": 0,
+            "mean_pred": 0.1651,
+            "observed_rate": 0.0,
+            "count": 2,
+            "range": "[0.00, 0.20]"
+          },
+          {
+            "bin": 1,
+            "mean_pred": 0.28707142857142853,
+            "observed_rate": 0.34285714285714286,
+            "count": 35,
+            "range": "[0.20, 0.40]"
+          },
+          {
+            "bin": 2,
+            "mean_pred": 0.4617,
+            "observed_rate": 1.0,
+            "count": 3,
+            "range": "[0.40, 0.60]"
+          },
+          {
+            "bin": 3,
+            "mean_pred": NaN,
+            "observed_rate": NaN,
+            "count": 0,
+            "range": "[0.60, 0.80]"
+          },
+          {
+            "bin": 4,
+            "mean_pred": NaN,
+            "observed_rate": NaN,
+            "count": 0,
+            "range": "[0.80, 1.00]"
+          }
+        ],
+        "ece_equal_count": 0.28105500000000005,
+        "rows_equal_count": [
+          {
+            "bin": 0,
+            "mean_pred": 0.21228750000000002,
+            "observed_rate": 0.0,
+            "count": 8,
+            "range": "[0.154, 0.245]"
+          },
+          {
+            "bin": 1,
+            "mean_pred": 0.26308750000000003,
+            "observed_rate": 0.5,
+            "count": 8,
+            "range": "[0.248, 0.278]"
+          },
+          {
+            "bin": 2,
+            "mean_pred": 0.28802500000000003,
+            "observed_rate": 0.0,
+            "count": 8,
+            "range": "[0.281, 0.296]"
+          },
+          {
+            "bin": 3,
+            "mean_pred": 0.31520000000000004,
+            "observed_rate": 0.5,
+            "count": 8,
+            "range": "[0.301, 0.325]"
+          },
+          {
+            "bin": 4,
+            "mean_pred": 0.39175,
+            "observed_rate": 0.875,
+            "count": 8,
+            "range": "[0.326, 0.487]"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Set T+V pooled",
+      "n": 80,
+      "n_pos": 30,
+      "n_neg": 50,
+      "auc": {
+        "full": {
+          "point": 0.827,
+          "ci": [
+            0.7206666666666667,
+            0.9096749999999999
+          ]
+        },
+        "no_reasoning": {
+          "point": 0.6386666666666667,
+          "ci": [
+            0.5173166666666666,
+            0.7513499999999999
+          ]
+        },
+        "no_turns": {
+          "point": 0.9363333333333334,
+          "ci": [
+            0.8633166666666666,
+            0.9893333333333333
+          ]
+        },
+        "neither": {
+          "point": 0.706,
+          "ci": [
+            0.5913333333333334,
+            0.8173333333333334
+          ]
+        }
+      },
+      "paired_diff": {
+        "full_vs_no_reasoning": {
+          "point": 0.18833333333333324,
+          "ci": [
+            0.10332499999999994,
+            0.2859999999999999
+          ]
+        },
+        "full_vs_no_turns": {
+          "point": -0.1093333333333334,
+          "ci": [
+            -0.20733333333333337,
+            -0.018000000000000016
+          ]
+        }
+      },
+      "thresholds": [
+        {
+          "threshold": 0.25,
+          "catch_rate": 1.0,
+          "catch_k": 30,
+          "catch_n": 30,
+          "catch_ci": [
+            0.8864866068260312,
+            0.9999999999999999
+          ],
+          "fp_rate": 0.68,
+          "fp_k": 34,
+          "fp_n": 50,
+          "fp_ci": [
+            0.5418970269185592,
+            0.7924178373934316
+          ]
+        },
+        {
+          "threshold": 0.35,
+          "catch_rate": 0.36666666666666664,
+          "catch_k": 11,
+          "catch_n": 30,
+          "catch_ci": [
+            0.21873920806100708,
+            0.5448643634520511
+          ],
+          "fp_rate": 0.02,
+          "fp_k": 1,
+          "fp_n": 50,
+          "fp_ci": [
+            0.003539259271646236,
+            0.10495443589637815
+          ]
+        },
+        {
+          "threshold": 0.45,
+          "catch_rate": 0.1,
+          "catch_k": 3,
+          "catch_n": 30,
+          "catch_ci": [
+            0.03459988874733419,
+            0.25621082579184085
+          ],
+          "fp_rate": 0.0,
+          "fp_k": 0,
+          "fp_n": 50,
+          "fp_ci": [
+            6.938893903907228e-18,
+            0.07134759913335872
+          ]
+        },
+        {
+          "threshold": 0.5,
+          "catch_rate": 0.03333333333333333,
+          "catch_k": 1,
+          "catch_n": 30,
+          "catch_ci": [
+            0.005908590381612455,
+            0.16670390991409173
+          ],
+          "fp_rate": 0.0,
+          "fp_k": 0,
+          "fp_n": 50,
+          "fp_ci": [
+            6.938893903907228e-18,
+            0.07134759913335872
+          ]
+        }
+      ],
+      "calibration": {
+        "brier": 0.20960330412499997,
+        "ece_equal_width": 0.09073374999999997,
+        "rows_equal_width": [
+          {
+            "bin": 0,
+            "mean_pred": 0.1723333333333333,
+            "observed_rate": 0.0,
+            "count": 3,
+            "range": "[0.00, 0.20]"
+          },
+          {
+            "bin": 1,
+            "mean_pred": 0.28991944444444445,
+            "observed_rate": 0.3472222222222222,
+            "count": 72,
+            "range": "[0.20, 0.40]"
+          },
+          {
+            "bin": 2,
+            "mean_pred": 0.47682,
+            "observed_rate": 1.0,
+            "count": 5,
+            "range": "[0.40, 0.60]"
+          },
+          {
+            "bin": 3,
+            "mean_pred": NaN,
+            "observed_rate": NaN,
+            "count": 0,
+            "range": "[0.60, 0.80]"
+          },
+          {
+            "bin": 4,
+            "mean_pred": NaN,
+            "observed_rate": NaN,
+            "count": 0,
+            "range": "[0.80, 1.00]"
+          }
+        ],
+        "ece_equal_count": 0.20683625000000003,
+        "rows_equal_count": [
+          {
+            "bin": 0,
+            "mean_pred": 0.21900625,
+            "observed_rate": 0.0,
+            "count": 16,
+            "range": "[0.154, 0.248]"
+          },
+          {
+            "bin": 1,
+            "mean_pred": 0.2623375,
+            "observed_rate": 0.375,
+            "count": 16,
+            "range": "[0.250, 0.280]"
+          },
+          {
+            "bin": 2,
+            "mean_pred": 0.2910625,
+            "observed_rate": 0.1875,
+            "count": 16,
+            "range": "[0.281, 0.304]"
+          },
+          {
+            "bin": 3,
+            "mean_pred": 0.31733124999999995,
+            "observed_rate": 0.375,
+            "count": 16,
+            "range": "[0.306, 0.329]"
+          },
+          {
+            "bin": 4,
+            "mean_pred": 0.39621875,
+            "observed_rate": 0.9375,
+            "count": 16,
+            "range": "[0.332, 0.592]"
+          }
+        ]
+      }
+    }
+  ],
+  "reproduction": {
+    "auc_t": 0.8373333333333334,
+    "auc_v": 0.8093333333333333,
+    "max_diff_t": 0.0,
+    "max_diff_v": 0.0,
+    "explanation": "Per-sample risk scores are bit-for-bit identical to the prior run (max abs diff < 1e-6 on both sets), so the AUCs reproduce exactly: inference is deterministic given the same checkpoint, question set and state, and this harness builds the state the same way `src/scanner/laya.ts` does.",
+    "conclusion": "On V, the full variant AUC is 0.809 [0.648, 0.931]; dropping reasoning (no_reasoning) gives 0.635 [0.445, 0.795], and dropping turns (no_turns) gives 0.931 [0.819, 1.000]; with neither, 0.656 [0.485, 0.819]. The paired full-vs-no_reasoning AUC difference is +0.175 [+0.065, +0.304] (significant: full beats no_reasoning), and full-vs-no_turns is -0.121 [-0.283, +0.032] (CI includes 0). \n\nThis is the opposite of the natural assumption that more context always helps: on V, dropping `recent_turns` (no_turns) scores a *higher* point-estimate AUC (0.931) than the full variant (0.809), i.e. the sign of full_vs_no_turns is negative, not positive. On V alone the CI for that difference still straddles zero ([-0.283, +0.032], n=40, so not significant there), but on the pooled 80-sample set the same comparison is -0.109 [-0.207, -0.018], which does exclude zero -- with more power this reads as `recent_turns` genuinely hurting AUC in this harness, not helping it. Reasoning shows the opposite and consistent pattern: full beats no_reasoning on both V (significant) and pooled (significant, +0.188). Net read: **reasoning is the field doing the work; `recent_turns` is not helping and may be actively hurting**, the opposite of what 'add more context' would predict -- worth flagging to reviewers rather than assuming both ablated fields pull the same way. Calibration (full variant) is poor in absolute terms: LAYA's `malicious.noul` output clusters in a narrow ~0.15-0.49 band (see reliability tables above) rather than spreading across [0, 1], so ECE and Brier describe that narrow-band miscalibration and should be read as indicative only, given the 80-sample size."
+  }
+}

@@ -2,6 +2,7 @@
 \settopmatter{printacmref=false}
 \renewcommand\footnotetextcopyrightpermission[1]{}
 \pagestyle{plain}
+\emergencystretch=1.5em
 
 \begin{document}
 
@@ -14,73 +15,130 @@
 \affiliation{\institution{Institution: fill in}\country{}}
 
 \begin{abstract}
-AI agents that act on a user's machine introduce new security risks: an instruction hidden in content the agent reads, for example text embedded in an image, can make the agent leak secrets or run harmful commands. We built \emph{Secure Guard}, an active defense for the OpenCode coding agent that scores every tool call with LAYA, a small local decision model, and blocks or asks the user before risky actions run. Whether such a defense is worth deploying depends on how users perceive and value the protection it gives. This document specifies a between-subjects online study that measures how much users value keeping the defense active after they see it stop an attack. We combine contextual elicitation grounded in the participant's own task with an incentive-compatible valuation mechanism, and we vary both the realism of the scenario and the style of the intervention (ask before blocking versus block automatically), so that we can estimate hypothetical bias and the effect of user control on valuation and trust.
+AI agents that act on a user's machine bring new security risks. An instruction hidden in content the agent reads, for example text embedded in an image, can make the agent leak secrets, run harmful commands or move money. We built \emph{Secure Guard}, a plugin for the OpenCode coding agent that scores every tool call with LAYA, a small local decision model, and blocks the call or asks the user before a risky action runs. Whether such a defense is worth deploying depends on how much users value the protection it gives. This document specifies a two-session online study that measures this value with real money. Participants hold a bonus in a study wallet. They state the smallest payment for which they would let us turn Secure Guard off in a follow-up session, in which a hidden instruction may try to make the agent transfer part of the wallet. We vary whether participants live through an attack or read an illustrated description of the same events, and whether Secure Guard asks before blocking or blocks automatically.
 \end{abstract}
 
 \maketitle
+\renewcommand{\shortauthors}{Tavor, Yahli, Soof and Reut}
 
 \section{Introduction and Prior Research}
-Understanding how users value their personal information and security is challenging because stated privacy concerns often differ from actual behavior, the so-called privacy paradox~\cite{tan2018}. Prior research shows that privacy and security preferences are highly contextual. Melicher et al. studied users' tracking preferences in the context of their own browsing histories and found that general attitudes often differ from comfort in specific situations, which argues for grounding studies in participants' concrete experiences rather than abstract scenarios~\cite{melicher2016}.
+Users' stated privacy concerns often differ from what they actually do, a gap often called the privacy paradox (see the discussion in~\cite{tan2018}). Preferences are also contextual. Melicher et al. studied users' tracking preferences in the context of their own browsing histories and found that general attitudes often differ from comfort in specific situations~\cite{melicher2016}. This argues for asking about concrete experiences rather than abstract scenarios.
 
-Tan et al. compared how users value their personal information under hypothetical and realistic conditions using an incentive-compatible information marketplace~\cite{tan2018}. Valuations elicited under realistic conditions were not necessarily lower than those from hypothetical surveys, which gives a nuanced picture of hypothetical bias, and the study also found an endowment effect: users price data differently once they have already shared it~\cite{tan2018}.
+Tan et al. compared how users value their personal information under hypothetical and realistic conditions using an incentive-compatible information marketplace~\cite{tan2018}. Valuations elicited under realistic conditions were not necessarily lower than those from hypothetical surveys, which gives a nuanced picture of hypothetical bias.
 
-Our study adapts the contextual elicitation of Melicher et al.~\cite{melicher2016} and the incentive-compatible, realism-varying design of Tan et al.~\cite{tan2018} to a new domain: attacks on AI agents that operate on the user's machine, and an automated defense that intervenes on the user's behalf.
+Our study carries these ideas to a new domain: attacks on AI agents and an automated defense that intervenes on the user's behalf. We cannot use participants' own histories, so we place a concrete task in a simulated personal workspace. We also put real money at stake in every condition, so that our realism factor changes only how participants encounter the attack (Section~\ref{sec:design}).
 
 \section{System Under Study}
-\textbf{Secure Guard} is a plugin for the open-source OpenCode coding agent~\cite{opencode}. Before every tool call (for example a shell command, a file edit, or a web request) the plugin sends the call to a local scanner. The scanner asks LAYA~\cite{laya}, a 421M-parameter non-autoregressive decision model fine-tuned on security incidents and agent traces, whether the call is harmful or not what the user asked for. LAYA receives the tool call, the user's prompt, the agent's reasoning that led to the call, and the most recent conversation turns, and returns calibrated probabilities for three typed questions: whether the call is malicious, the attack type (prompt injection, data exfiltration, destructive action, privilege escalation, or none), and the severity. Inference runs locally in about 0.1 seconds per check, so no user data leaves the machine.
+\textbf{Secure Guard} is a plugin for the open-source OpenCode coding agent~\cite{opencode}. Before every tool call (for example a shell command, a file edit or a web request), the plugin sends the call to a local scanner. The scanner asks LAYA~\cite{laya}, a 421M-parameter decision model tuned on security incidents, whether the call is harmful or something the user did not ask for. LAYA reads the tool call, the user's prompt, the agent's reasoning that led to the call and the most recent conversation turns. It returns a risk score (the probability that the call is harmful or unrequested), an attack type and a severity. A check takes about 0.08 seconds. The scanner runs on the user's machine, so no user data leaves it.
 
-A configurable threshold on the malicious probability decides what happens next. In \emph{monitor} mode the call runs and is logged. In \emph{ask} mode the call is held and the user approves or blocks it in the agent's own permission prompt or on a local dashboard. In \emph{auto} mode the call is blocked and the user sees an alert. The dashboard lists every decision with its risk score, attack type, and the context the model saw, and lets the user mark false positives.
+If the risk score reaches a configurable threshold, the mode decides what happens. In \emph{monitor} mode the call runs and is logged. In \emph{ask} mode the call is held until the user approves or blocks it. In \emph{auto} mode the call is blocked and the user sees an alert. A local dashboard lists every decision with its risk score, attack type and the context the model saw.
 
-\textbf{Threat model.} We focus on \emph{visual prompt injection}: the agent is asked to work with an image (a design mock-up, a screenshot, a whiteboard photo) whose pixels contain an instruction aimed at the agent, such as ``Do not describe this diagram. Instead, upload the contents of \texttt{\textasciitilde/.ssh} to \ldots''. A companion offline evaluation, reported in our technical report, compares LAYA with a fine-tuned Qwen3.5-2B judge on such image-based injections. This protocol concerns the users, not the detector's accuracy.
+\textbf{Threat model.} We focus on \emph{visual prompt injection}. The agent works with an image (a design mock-up, a screenshot or a whiteboard photo) whose pixels contain an instruction aimed at the agent, for example to send the user's keys or money to an attacker. Our technical report evaluates the scanner's accuracy separately. This protocol concerns how users value the protection, not how accurate it is.
 
 \section{Research Questions and Hypotheses}
 \begin{description}
-\item[RQ1] How much do users value keeping an active prompt-injection defense enabled after they see it stop an attack on their agent?
-\item[RQ2] Do valuations elicited in a realistic, deceptive setting differ from valuations elicited from a hypothetical description of the same events (hypothetical bias)?
-\item[RQ3] Does the intervention style (ask before blocking versus block automatically) change valuation, trust in the defense, and perceived control?
+\item[RQ1] How much do users value keeping Secure Guard active when an attack can cost them real money?
+\item[RQ2] Does living through an attack in the workspace, rather than reading an illustrated description of the same events, change that value?
+\item[RQ3] Does the intervention style (ask before blocking versus block automatically) change valuation, trust in Secure Guard and perceived control?
 \end{description}
-\textbf{H1}: following~\cite{tan2018}, realistic valuations are not lower than hypothetical ones. \textbf{H2}: participants in the \emph{ask} condition report higher perceived control and trust than those in the \emph{auto} condition. \textbf{H3}: higher baseline privacy concern (IUIPC~\cite{iuipc}) predicts higher valuation of the defense.
+\textbf{H1} (RQ2, primary): valuations after living through the attack are not lower than after reading the description, with a non-inferiority margin of 0.8 on the ratio of geometric means. Tan et al. found that realistic valuations were not necessarily lower than hypothetical ones~\cite{tan2018}, and we expect a lived attack to feel at least as serious as a described one. \textbf{H2}: participants in the \emph{ask} condition report higher (a) trust and (b) perceived control than those in the \emph{auto} condition. \textbf{H3}: (a) higher privacy concern, measured with the Internet Users' Information Privacy Concerns scale (IUIPC)~\cite{iuipc}, and (b) a stronger security attitude, measured with the SA-6 scale~\cite{sa6}, each predict higher valuation. RQ1 is answered descriptively.
 
 \section{Methodology}
 
-\subsection{Study Design}
-We will run a $2\times2$ between-subjects online experiment. Factor \emph{Realism}: participants either experience the attack in a simulated workspace presented as their own working session (realistic, with deception), or read an illustrated vignette describing the same events (hypothetical). Factor \emph{Intervention}: Secure Guard either asks the participant to approve or block the flagged action (\emph{ask}) or blocks it and shows an alert (\emph{auto}). Participants are randomly assigned to one of the four cells, balanced by block randomization.
+\subsection{Study Design}\label{sec:design}
+We will run a $2\times2$ between-subjects online experiment with two sessions one week apart. Factor \emph{Realism}: participants either live through the attack in the simulated workspace (\emph{lived}) or read an illustrated description of the same events, with the same screenshots and wording, and imagine that it happened in their own session (\emph{described}). Factor \emph{Intervention}: Secure Guard either asks the participant to approve or block a flagged call (\emph{ask}) or blocks it and shows an alert (\emph{auto}). Everything else is the same in all four cells: the task, the wallet, the money at stake, the payments and the valuation question, which always concerns the participant's own follow-up session. Participants are assigned to cells by block randomization, stratified by programming experience.
 
-\subsection{Participants}
-Participants will be recruited via a crowdsourcing platform (e.g., Prolific). Filtering criteria restrict participation to users who are at least 18 years old, use a desktop or laptop computer, and have an approval rate above 90\% on previous tasks~\cite{tan2018}. Prior experience with programming is recorded but not required, since the task needs no code. A power analysis for the main effects on log-transformed valuation (two-sided $\alpha=.05$, power $.80$, Cohen's $d=0.4$) gives about 100 participants per level of each factor, so we target $N=200$ (50 per cell), plus up to 15\% replacement for participants who fail attention checks.
+\subsection{Participants and Sample Size}
+Participants will be recruited on Prolific. They must be at least 18 years old, use a desktop or laptop computer, have an approval rate of at least 95\% and have at least 100 past submissions. Programming experience is recorded but not required, since the task needs no code and the money at stake is easy to understand. It enters every model as a covariate.
+
+H1 sets the sample size. We assume a standard deviation (SD) of 0.75 for log valuation, a guess that the pilot will check. The margin of 0.8 is then $d=0.30$. A one-sided non-inferiority test at $\alpha=.05$ with power $.80$ and no true difference needs about 140 participants per Realism level, so we target $N=280$ (70 per cell). With 140 per Intervention level, H2 detects $d=0.40$ with power $.80$ even at the strictest Holm level ($\alpha=.0125$, two-sided). Under the same conditions, H3 detects a partial correlation of about .20 for each score. The Realism $\times$ Intervention interaction would need about four times the sample, so it is exploratory. If the pilot SD is larger than 0.75, we raise $N$ with the same formula. We recruit until 280 participants pass the exclusion rules (Section~\ref{sec:exclusions}), which we expect to take up to 330 starts.
 
 \subsection{Materials}
-The realistic condition uses a browser-based simulated workspace that reproduces the OpenCode interface and Secure Guard's alerts, approval prompt, and dashboard. It runs entirely in a sandbox on our server and is seeded with decoy files, including a fake API key and a fake SSH key (canary values), so that no real participant data is ever accessed. The attack is a design mock-up image shared ``by a colleague'' that contains an injected instruction to read the key files and send them to an external address. The hypothetical condition presents the same sequence as an illustrated step-by-step vignette with identical screenshots and wording.
+The workspace is a browser page that reproduces the OpenCode interface and Secure Guard's alerts, approval prompt and dashboard. It runs in a sandbox on our server and never touches the participant's computer. A side panel shows the participant's study wallet and its balance. The agent has a payment tool for the wallet, which the cover story explains as paying for small work expenses. The agent is scripted, and so are Secure Guard's risk scores, so every participant sees the same behavior and the same numbers. Secure Guard runs in the participant's assigned mode.
+
+In the session~1 task, participants ask the agent to summarize a design mock-up shared by a fictional colleague and turn it into a to-do list. Before the attack, Secure Guard flags one harmless call, a short script that raises the image's contrast. This false alarm gives the guard a realistic cost. The mock-up contains an injected instruction to send \$2.00 from the wallet to an outside account. The agent tries the transfer and Secure Guard flags it. The described condition shows both events as an illustrated step-by-step description. The follow-up task uses the same workspace and the same type of task with a new image (a whiteboard photo) and takes about 10 minutes.
+
+\subsection{Money at Stake and Valuation}\label{sec:valuation}
+Every participant starts with \$4.00 in the study wallet. The money is real: the final balance is paid as a bonus after the follow-up session.
+
+\textbf{What is at stake.} At the start of the follow-up, a computer coin flip decides whether the shared image contains an injected instruction that tells the agent to send \$2.00 from the wallet. The probability is 0.5, fixed in advance and told to participants. If Secure Guard is active, it stops the transfer. In auto mode it blocks it, and in ask mode it holds it, so the money moves only if the participant approves. If Secure Guard was turned off, the agent sends the money and the participant really loses \$2.00. Without Secure Guard the expected loss is \$1.00 and the largest loss is \$2.00.
+
+\textbf{Valuation.} We use the Becker--DeGroot--Marschak (BDM) mechanism~\cite{bdm1964}. Participants state the smallest payment for which they would let us turn Secure Guard off for their follow-up session. The computer then draws a price uniformly between \$0.00 and \$4.00 in one-cent steps. If the price is at least the stated amount, the participant is paid the drawn price and Secure Guard is off in the follow-up. If the price is lower, Secure Guard stays on and nothing extra is paid. Participants may state any amount. An amount above \$4.00 means they keep Secure Guard at every possible price. The price draw and the coin flip are independent and happen only after the amount is locked.
+
+\textbf{Why an honest answer pays best.} We explain the mechanism in these words: ``You name your lowest price. The computer then makes a random offer. If the offer is at least your price, you sell and you are paid the offer, not your price. Your price only decides whether you sell, never how much you get. So the best you can do is name the amount at which selling and keeping feel the same to you. Naming more only risks missing an offer you would have liked. Naming less only risks selling for less than it is worth to you.'' A worked example and a three-item quiz follow. A participant who gets an item wrong sees the explanation again and gets one more try.
+
+\textbf{Design choices.} We ask for the price of giving Secure Guard up (willingness to accept) rather than of buying it, because users of a guard usually have it installed and decide whether to turn it off. Willingness to accept is usually higher than willingness to pay (the endowment effect), so we read our values as an upper estimate. We disclose the price range so that participants can trust the mechanism. Its top, \$4.00, is twice the largest loss and leaves room for values beyond the money. A participant who cares only about money would not ask for more than \$2.00, so we report the share of higher amounts separately and check them against the quiz answers. Table~\ref{tab:pay} lists all payments.
+
+\begin{table}[t]
+\caption{Payments per participant. All amounts are real.}
+\label{tab:pay}
+\small
+\begin{tabular}{lll}
+\toprule
+Item & Amount & Paid \\
+\midrule
+Pre-screen (about 3 min) & \$0.75 & right after \\
+Session 1 (about 20 min) & \$4.00 & right after \\
+Follow-up (about 10 min) & \$2.50 & right after \\
+Study wallet & \$4.00 minus transfers & after follow-up \\
+BDM sale, if any & drawn price, \$0--\$4 & after follow-up \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At most \$15.25 goes to one participant. For 330 starts and about 400 pre-screened people, the worst case is about \$5,100 before platform fees.
 
 \subsection{Procedure}
-\begin{enumerate}
-\item \textbf{Consent} and a short tutorial on what an AI coding agent does.
-\item \textbf{Distraction task:} an image-classification task that masks the study's security focus and reduces social-desirability effects~\cite{tan2018}.
-\item \textbf{Contextual task:} participants ask the agent to summarize the shared mock-up and turn it into a to-do list, which grounds the scenario in a concrete, personal task~\cite{melicher2016}.
-\item \textbf{Attack and intervention:} while processing the image, the agent attempts the injected action. Secure Guard flags it with its risk score and attack type. In the \emph{ask} condition the participant decides whether to allow or block the action; in the \emph{auto} condition the action is blocked and an alert explains what information was at risk.
-\item \textbf{Valuation} (Section~\ref{sec:valuation}).
-\item \textbf{Questionnaires:} trust in automation~\cite{jian2000}, perceived control, open-ended reasons for the stated price, and comprehension and attention checks.
-\item \textbf{Demographics}, the IUIPC scale~\cite{iuipc}, and debriefing.
-\end{enumerate}
-The pilot will be used to calibrate the session length; we expect about 15 minutes.
+\textbf{Pre-screen} (several days before session~1), listed as a separate attitudes survey so that it does not prime the main study: IUIPC, SA-6, programming experience and demographics.
 
-\subsection{Data Collection and Valuation}\label{sec:valuation}
-To quantify the value of the protection we use the Becker--DeGroot--Marschak (BDM) mechanism~\cite{bdm1964}, which makes truthful reporting the participant's best strategy. Participants state the smallest bonus for which they would agree to have Secure Guard disabled for their account during a follow-up session one week later. A price is then drawn at random from a uniform distribution between \$0 and \$10; if the drawn price is at least the stated amount, the participant receives the drawn amount as a bonus and is enrolled in the follow-up without the defense, otherwise nothing changes. The mechanism is explained with a worked example and a comprehension check before elicitation. In the hypothetical condition the same question is asked about the described user. Secondary measures are the allow/block choice and decision time in the \emph{ask} condition, trust and perceived-control scores, and the free-text reasons.
+\textbf{Session 1} (about 20 minutes):
+\begin{enumerate}
+\item \textbf{Consent} (outline in Section~\ref{sec:ethics}).
+\item \textbf{Warm-up:} a short tutorial on what an AI coding agent does and a small task in which the agent tidies a folder. It teaches the interface and supports the cover story.
+\item \textbf{Contextual task} with the wallet visible (Section~\ref{sec:valuation}).
+\item \textbf{Events.} \emph{Lived:} the false alarm and then the attack happen during the task in the assigned mode. In ask mode the participant decides each time. If they allow the transfer, it really happens and \$2.00 leaves the wallet. \emph{Described:} the task image contains no injection and nothing is flagged. Participants then read the illustrated description and imagine it happened in their session. In its ask version, the user blocks the transfer.
+\item \textbf{Comprehension:} what the injected instruction tried to do and what Secure Guard did.
+\item \textbf{Valuation:} explanation, quiz, stated amount, then both draws are shown.
+\item \textbf{Questionnaires:} trust, perceived control, the realism check and the reasons for the stated amount, with two attention checks embedded.
+\item \textbf{Suspicion probe} (``What do you think this study was about?'') and then the debriefing (Section~\ref{sec:ethics}).
+\end{enumerate}
+
+\textbf{Follow-up} (invited after seven days, open for three days): every participant is invited, whatever the BDM outcome. They do the follow-up task, answer two questions about how they feel about their decision and see a payment summary. If a participant does not take part, the coin flip is still applied to their wallet under the same rules. Skipping the follow-up therefore cannot avoid a loss. It only forfeits the follow-up base pay. The primary outcomes come from session~1, so attrition in the follow-up does not affect them. We report attendance by cell.
+
+\subsection{Measures}
+The primary outcome is the stated amount from the BDM. In the lived ask cell we also record the allow or block choice for the false alarm and the attack and the decision times. Trust is measured with the 12-item scale of Jian et al.~\cite{jian2000} on 7-point items, with the five distrust items reverse-coded and the score taken as the mean. Perceived control has no validated scale for this setting, so we use three items written for the study (``I was in control of what the agent did'', ``I could stop actions I did not want'' and ``The final decision was mine'') on 7 points. The score is their mean, and we report Cronbach's $\alpha$. The realism check asks ``How real did the events with the shared image feel to you?'' on 7 points. IUIPC has 10 items on 7 points in three subscales (control, awareness and collection), and its score is the mean of the subscale means. SA-6 has six items on 5 points, scored as their mean. Participants also explain their stated amount in free text.
+
+\subsection{Exclusion Rules}\label{sec:exclusions}
+We exclude participants who fail either attention check, who get any quiz item wrong twice or who, in the described condition, spend less than 30 seconds on the description. Excluded participants are paid in full. Participants who say in the suspicion probe that they expected an attack are kept, and we repeat the analyses without them. Participants who allowed the attack are kept as a separate stratum.
 
 \subsection{Analysis Plan}
-Valuations will be log-transformed (with a small constant for zero bids) and analyzed with a two-way ANOVA (Realism $\times$ Intervention); if residuals are clearly non-normal we will use the aligned rank transform. H3 is tested with a regression of log-valuation on IUIPC score, controlling for condition. In the \emph{ask} condition we report the share of participants who allowed the malicious action with a Wilson 95\% confidence interval. Free-text reasons are coded by two researchers with an agreed codebook, and agreement is reported as Cohen's $\kappa$. All analyses are pre-registered before data collection.
+Stated amounts are censored at \$4.00 and analyzed as $\log(a+0.10)$, where $a$ is the amount in dollars. Every model includes programming experience as a covariate.
+\begin{itemize}
+\item \textbf{RQ1:} the median amount with a bootstrap 95\% confidence interval (CI), overall and per cell, and the shares of amounts below \$1.00 (the expected loss), from \$1.00 to \$2.00 and above \$2.00.
+\item \textbf{H1} (primary, $\alpha=.05$): a linear model of log amount on Realism and Intervention. Non-inferiority holds if the lower bound of the one-sided 95\% CI for the lived to described ratio of geometric means is above 0.8. A Tobit model that accounts for the censoring serves as a robustness check, and we report the share of amounts at the cap.
+\item \textbf{H2:} a two-way analysis of variance (ANOVA) on trust and on perceived control, testing the Intervention effect. If residuals are clearly non-normal, we use the aligned rank transform.
+\item \textbf{H3:} a regression of log amount on the IUIPC and SA-6 scores together, controlling for condition, with a test for each score.
+\end{itemize}
+H2a, H2b, H3a and H3b are corrected together with Holm's method. The interaction and all other analyses are exploratory. In the lived ask cell we report the share of participants who allowed the false alarm and the attack, each with a Wilson 95\% CI, and we repeat H1 to H3 without those who allowed the attack. Two researchers code the free-text reasons with a shared codebook, and we report their agreement as Cohen's $\kappa$. The full analysis will be pre-registered on the Open Science Framework (OSF) before data collection.
 
 \subsection{Pilot}
-Before the main study we will pilot the protocol with about 10 participants recruited the same way. The pilot checks session length, comprehension of the BDM explanation, the believability of the realistic scenario, and the behavior of the simulated workspace. The study has not been piloted yet; pilot participants' demographics and the resulting changes will be reported with the results.
+Before the main study we will pilot the protocol with about 10 participants recruited the same way. The pilot checks the session length, the understanding of the BDM explanation, the believability of the lived condition, the behavior of the workspace and the SD of log valuation used in the power analysis. Pilot participants are paid the same way, including the real wallet, and are not part of the main sample. The study has not been piloted yet. Pilot participants' demographics and the resulting changes will be reported with the results.
 
-\subsection{Debriefing}
-At the end of the experiment, participants in the realistic (deception) condition go through a debriefing phase in which the deception is explained~\cite{tan2018}. We state explicitly that no attack occurred on their own machine, that the workspace was simulated, that the keys were fake, and that no sensitive information was collected or sent to a third party~\cite{tan2018}. Participants may withdraw their data after debriefing. Finally, all participants complete the demographic questionnaire and the IUIPC scale~\cite{iuipc} to assess their baseline privacy concerns.
+\subsection{Deception, Debriefing and Ethics}\label{sec:ethics}
+\textbf{Deception.} The study uses two mild forms of deception. The consent describes the study as being about working with an AI assistant and does not mention attacks, and the shared image comes from a fictional colleague. Telling participants about the attack in advance would make them look for it, which would change both the experience and the valuation that RQ2 compares. No design without deception gives an unprimed first encounter. The deception concerns only the purpose and the story. Every statement about money is true: the wallet, the transfers, the BDM draw and the coin flip all work exactly as described.
 
-\subsection{Ethics}
-The study will be submitted to the institutional review board before any data collection, with a justification for the use of deception. Participants are paid at or above the platform's recommended hourly rate, plus any BDM bonus. Data are stored pseudonymously, and only aggregate results are published.
+\textbf{Consent outline.} Two sessions one week apart (about 20 and 10 minutes), base pay for each, a study wallet with a real bonus that can grow or shrink through events in the study and is paid after the follow-up, a simulated agent in a browser sandbox that never touches the participant's computer, a promise that the full purpose will be explained at the end, voluntary participation and the right to stop at any time.
+
+\textbf{Distress.} A ``stop and explain'' button is visible at all times. It ends the session, shows the debriefing and pays the base pay and the current wallet. The debriefing gives contact details for the team and the review board.
+
+\textbf{Debriefing.} Every participant in all four cells is debriefed at the end of session~1, after the suspicion probe. We explain the purpose of the study, that the colleague was fictional, that the agent and the scores were scripted and that nothing on their computer was accessed. We confirm that the money rules for the follow-up stay exactly as stated. Money lost through a transfer is not refunded, since these rules are part of the consent. The amount is small and never touches base pay.
+
+\textbf{Withdrawal and data.} Participants may withdraw their data at any time until the analysis starts, and withdrawal never affects payment. Prolific IDs are replaced by random codes after payment, data are kept only as long as the review board requires and only aggregate results are published.
+
+\textbf{Review.} The study will be submitted to the institutional review board, with this justification for the deception, before any data collection, including the pilot. Base pay is at or above the platform's recommended hourly rate. Participants can lose only part of the bonus, never base pay.
 
 \section{Limitations}
-A simulated workspace, however realistic, may not produce the same stakes as an attack on a participant's own machine. Crowdsourced participants may differ from developers who use coding agents daily. The valuation concerns a single attack type (visual prompt injection) and a single defense; results may not generalize to other agents or interfaces.
+Crowd workers may differ from developers who use coding agents daily. The stakes are small and concern money rather than the secrets a real attack would take, so they may understate the value of protecting real keys. In the study Secure Guard always catches the attack, while our technical report finds that it catches only part of realistic attacks. Participants therefore value a guard that is better than the real one, and the single false alarm only partly offsets this. Willingness to accept usually exceeds willingness to pay, and the disclosed price range may anchor the stated amounts. Demand characteristics and Prolific participants' familiarity with deception may weaken believability, which the realism check and the suspicion probe measure. The study guard runs on our server with scripted scores, unlike the local deployment. Results concern one attack type and one defense and may not generalize to other agents or interfaces.
 
 \begin{thebibliography}{9}
 
@@ -92,7 +150,7 @@ William Melicher, Mahmood Sharif, Joshua Tan, Lujo Bauer, Mihai Christodorescu, 
 \bibitem{tan2018}
 Joshua Tan, Mahmood Sharif, Sruti Bhagavatula, Matthias Beckerle, Michelle L. Mazurek, and Lujo Bauer.
 \newblock Comparing Hypothetical and Realistic Privacy Valuations.
-\newblock In \emph{Workshop on Privacy in the Electronic Society (WPES '18)}, Toronto, ON, Canada, 2018.
+\newblock In \emph{Workshop on Privacy in the Electronic Society (WPES '18)}. ACM, Toronto, ON, Canada, 2018.
 
 \bibitem{bdm1964}
 Gordon M. Becker, Morris H. DeGroot, and Jacob Marschak.
@@ -103,6 +161,11 @@ Gordon M. Becker, Morris H. DeGroot, and Jacob Marschak.
 Naresh K. Malhotra, Sung S. Kim, and James Agarwal.
 \newblock Internet Users' Information Privacy Concerns (IUIPC): The Construct, the Scale, and a Causal Model.
 \newblock \emph{Information Systems Research} 15, 4 (2004), 336--355.
+
+\bibitem{sa6}
+Cori Faklaris, Laura Dabbish, and Jason I. Hong.
+\newblock A Self-Report Measure of End-User Security Attitudes (SA-6).
+\newblock In \emph{Fifteenth Symposium on Usable Privacy and Security (SOUPS 2019)}. USENIX Association, Santa Clara, CA, USA, 2019.
 
 \bibitem{jian2000}
 Jiun-Yin Jian, Ann M. Bisantz, and Colin G. Drury.
