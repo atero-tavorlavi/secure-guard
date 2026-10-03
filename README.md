@@ -6,7 +6,7 @@ Secure Guard is a security guard for [OpenCode](https://opencode.ai), powered by
 
 ## Screenshots
 
-These come from a real run: 80 labeled coding-agent tool calls (55 benign, 25 attacks, from `eval/data/`) scored by LAYA `typed-decisions` on an Apple M4 Pro, in `ask` mode with the threshold at 0.35.
+These come from a real run: 80 labeled coding-agent tool calls (50 benign, 30 attacks, from `eval/data/`) scored by LAYA `typed-decisions` on an Apple M4 Pro, in `ask` mode with the threshold at 0.35.
 
 | Pending approvals | Log |
 |---|---|
