@@ -1,20 +1,23 @@
 {
   "name": "secure-guard",
-  "version": "1.0.0",
-  "description": "OpenCode prompt-injection guard plugin — scans prompts, model turns, and tool outputs for injection attacks",
+  "version": "2.0.0",
+  "description": "Local security guard for OpenCode, powered by the LAYA decision model",
   "private": true,
   "type": "module",
   "scripts": {
-    "scanner": "bun run prompt-guard-mock.ts",
-    "scanner:dev": "bun --watch run prompt-guard-mock.ts",
+    "start": "bun run scripts/start.ts",
+    "scanner": "bun run src/scanner/main.ts",
+    "install-plugin": "bun run scripts/install-plugin.ts",
+    "dataset": "bun run scripts/dataset.ts",
+    "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "latest",
-    "@opencode-ai/sdk": "latest"
+    "@opencode-ai/plugin": "^1.18.34",
+    "@opencode-ai/sdk": "^1.18.34"
   },
   "devDependencies": {
-    "typescript": "^5.8.0",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "typescript": "^5.8.0"
   }
 }

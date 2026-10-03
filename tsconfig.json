@@ -5,9 +5,10 @@
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["bun-types"]
   },
-  "include": ["*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"]
 }

@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Secure Guard</title>
+<style>
+:root{--bg:#fbfbfa;--fg:#1d1d1f;--muted:#6b6b70;--card:#fff;--line:#e4e4e7;--accent:#2f6fde;--ok:#1f8a4c;--warn:#b7791f;--danger:#c0392b;--bar:#d65a4a;--chip:#f1f1f3}
+@media (prefers-color-scheme:dark){:root{--bg:#141416;--fg:#ececef;--muted:#9a9aa2;--card:#1d1d21;--line:#2c2c31;--accent:#6f9cff;--ok:#4cc38a;--warn:#f0b357;--danger:#ff6b5b;--bar:#e0675a;--chip:#26262b}}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:2}
+header h1{font-size:17px;margin:0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);margin-right:6px;vertical-align:middle}
+.dot.ok{background:var(--ok)}.dot.down{background:var(--danger)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--fg);padding:5px 12px;cursor:pointer;font:inherit}
+.seg button.on{background:var(--accent);color:#fff}
+nav{display:flex;gap:4px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--card);overflow-x:auto}
+nav button{border:0;background:transparent;color:var(--muted);padding:10px 12px;cursor:pointer;font:inherit;border-bottom:2px solid transparent;white-space:nowrap}
+nav button.on{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
+.badge{display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;background:var(--warn);color:#fff;font-size:11px;text-align:center;margin-left:4px}
+main{max-width:1100px;margin:0 auto;padding:16px}
+section[hidden]{display:none}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px}
+.kpi,.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.kpi b{display:block;font-size:24px}
+.muted{color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:12px}
+.bar{fill:var(--bar)}.axis{stroke:var(--line)}.chart-label,.chart-value{fill:var(--muted);font-size:11px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spread{justify-content:space-between}
+select,input,button.btn{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:7px;padding:5px 9px}
+button.btn{cursor:pointer}
+button.allow{border-color:var(--ok);color:var(--ok)}button.block{border-color:var(--danger);color:var(--danger)}
+.pending-item{border-left:4px solid var(--warn);margin-bottom:10px}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--chip);padding:8px;border-radius:7px;font:12px/1.45 ui-monospace,Menlo,monospace;max-height:320px;overflow:auto;margin:6px 0}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.wrap{white-space:normal;max-width:360px;overflow:hidden;text-overflow:ellipsis}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--chip)}
+.pill{display:inline-block;padding:1px 8px;border-radius:9px;border:1px solid currentColor;font-size:12px}
+.pill.blocked,.pill.redacted{color:var(--danger)}.pill.pending{color:var(--warn)}.pill.allowed{color:var(--ok)}.pill.log{color:var(--warn)}
+#drawer{position:fixed;top:0;right:0;width:min(560px,100%);height:100%;background:var(--card);border-left:1px solid var(--line);padding:16px;overflow:auto;z-index:5;box-shadow:-8px 0 24px rgba(0,0,0,.15)}
+#drawer[hidden]{display:none}
+#toasts{position:fixed;bottom:16px;left:16px;right:16px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;z-index:6;pointer-events:none}
+.toast{background:var(--fg);color:var(--bg);padding:8px 12px;border-radius:8px;max-width:520px}
+.toast.error{background:var(--danger);color:#fff}
+form.settings{display:grid;grid-template-columns:minmax(140px,220px) 1fr;gap:10px 16px;align-items:center;max-width:640px}
+form.settings .hint{grid-column:2;margin-top:-6px;font-size:12px}
+.banner{background:var(--danger);color:#fff;padding:8px 16px}
+.banner[hidden]{display:none}
+.no-token{min-height:100vh;margin:0;display:flex;align-items:center;justify-content:center;padding:16px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ Secure Guard</h1>
+  <div class="row">
+    <span><span id="laya-dot" class="dot"></span><span id="laya-text">LAYA: checking…</span></span>
+    <div class="seg" id="mode" role="group" aria-label="Mode">
+      <button data-mode="monitor">monitor</button><button data-mode="ask">ask</button><button data-mode="auto">auto</button>
+    </div>
+    <span class="muted" id="threshold-text"></span>
+  </div>
+</header>
+<div class="banner" id="banner" hidden></div>
+<nav>
+  <button data-tab="overview" class="on">Overview</button>
+  <button data-tab="pending">Pending <span class="badge" id="pending-badge" hidden>0</span></button>
+  <button data-tab="log">Log</button>
+  <button data-tab="settings">Settings</button>
+</nav>
+<main>
+  <section id="tab-overview">
+    <div class="row spread" style="margin-bottom:12px">
+      <select id="range" aria-label="Range"><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select>
+      <div class="row">
+        <span class="muted">Export</span>
+        <select id="export-range" aria-label="Export range"><option value="24h">24h</option><option value="7d">7d</option><option value="30d">30d</option><option value="all">all</option></select>
+        <button class="btn" data-export="html">HTML report</button><button class="btn" data-export="csv">CSV</button><button class="btn" data-export="json">JSON</button>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><b id="k-checked">–</b><span class="muted">checked</span></div>
+      <div class="kpi"><b id="k-blocked" style="color:var(--danger)">–</b><span class="muted">blocked</span></div>
+      <div class="kpi"><b id="k-rate">–</b><span class="muted">block rate</span></div>
+      <div class="kpi"><b id="k-would">–</b><span class="muted">would block (monitor)</span></div>
+      <div class="kpi"><b id="k-fp">–</b><span class="muted">false positives</span></div>
+    </div>
+    <div class="card"><div class="muted">Blocks over time</div><div id="c-series"></div></div>
+    <div class="grid2">
+      <div class="card"><div class="muted">By attack type</div><div id="c-type"></div></div>
+      <div class="card"><div class="muted">Top blocked tools</div><div id="c-tool"></div></div>
+    </div>
+  </section>
+
+  <section id="tab-pending" hidden>
+    <p class="muted" id="pending-empty">Nothing is waiting for a decision.</p>
+    <div id="pending-list"></div>
+  </section>
+
+  <section id="tab-log" hidden>
+    <form id="filters" class="row" style="margin-bottom:12px">
+      <select name="final" aria-label="Result"><option value="">any result</option><option>blocked</option><option>redacted</option><option>pending</option><option>allowed</option></select>
+      <label class="row"><input type="checkbox" name="flagged" value="1"> flagged only</label>
+      <select name="attackType" aria-label="Attack type"><option value="">any type</option><option>prompt_injection</option><option>data_exfiltration</option><option>destructive_action</option><option>privilege_escalation</option><option>none</option></select>
+      <input name="tool" placeholder="tool" size="8">
+      <input name="session" placeholder="session" size="10">
+      <input name="q" placeholder="search text" size="16">
+      <button class="btn">Filter</button>
+    </form>
+    <div class="table-wrap"><table>
+      <thead><tr><th>time</th><th>check</th><th>tool</th><th>type</th><th>risk</th><th>result</th><th>by</th><th>content</th></tr></thead>
+      <tbody id="log-body"></tbody>
+    </table></div>
+  </section>
+
+  <section id="tab-settings" hidden>
+    <form class="settings" id="settings">
+      <label for="s-threshold">Block threshold</label><input id="s-threshold" name="threshold" type="number" min="0.05" max="1" step="0.01">
+      <span class="hint muted">LAYA's probability that a check is malicious. At or above this, the mode decides.</span>
+      <label for="s-askTimeoutSec">Ask timeout (seconds)</label><input id="s-askTimeoutSec" name="askTimeoutSec" type="number" min="5" max="3600">
+      <label for="s-askTimeoutDefault">When nobody answers</label><select id="s-askTimeoutDefault" name="askTimeoutDefault"><option>block</option><option>allow</option></select>
+      <label for="s-failOpen">If LAYA is down</label><select id="s-failOpen" name="failOpen"><option value="false">block (fail closed)</option><option value="true">allow (fail open)</option></select>
+      <label for="s-nativePrompt">OpenCode's own prompt</label><select id="s-nativePrompt" name="nativePrompt"><option value="false">off (toast + dashboard)</option><option value="true">on (prompt flashes on every bash/edit/webfetch call)</option></select>
+      <span class="hint muted">Takes effect after restarting OpenCode.</span>
+      <label for="s-checkPrompts">Check user prompts</label><select id="s-checkPrompts" name="checkPrompts"><option value="false">no (tool calls only)</option><option value="true">yes</option></select>
+      <label for="s-checkToolOutputs">Check tool outputs</label><select id="s-checkToolOutputs" name="checkToolOutputs"><option value="false">no (tool calls only)</option><option value="true">yes</option></select>
+      <label for="s-contextTurns">Recent turns sent with a tool call</label><input id="s-contextTurns" name="contextTurns" type="number" min="0" max="5">
+      <span class="hint muted">Messages before the user's last prompt that LAYA sees, besides the prompt and the reasoning.</span>
+      <label for="s-verbose">Toast on every allowed check</label><select id="s-verbose" name="verbose"><option value="false">no</option><option value="true">yes</option></select>
+      <label for="s-retentionDays">Keep history (days)</label><input id="s-retentionDays" name="retentionDays" type="number" min="1" max="3650">
+      <label for="s-port">Scanner port</label><input id="s-port" name="port" type="number" min="1" max="65535">
+      <label for="s-laya-url">LAYA URL</label><input id="s-laya-url" name="laya.url">
+      <label for="s-laya-model">LAYA checkpoint</label><select id="s-laya-model" name="laya.model"><option>typed-decisions</option><option>multilingual</option><option>english</option></select>
+      <label for="s-laya-maxLen">LAYA token budget</label><input id="s-laya-maxLen" name="laya.maxLen" type="number" min="128" max="8192" step="128">
+      <label for="s-laya-timeoutMs">LAYA timeout (ms)</label><input id="s-laya-timeoutMs" name="laya.timeoutMs" type="number" min="100" max="20000">
+      <span></span><div class="row"><button class="btn">Save</button><span class="muted">Port changes need a scanner restart.</span></div>
+    </form>
+  </section>
+</main>
+
+<aside id="drawer" hidden>
+  <div class="row spread"><h2 id="d-title" style="margin:0;font-size:16px"></h2><button class="btn" id="d-close">Close</button></div>
+  <div id="d-body"></div>
+</aside>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+// The token arrives once as #token=<hex> (from /guard-dashboard or `bun run start`), moves to
+// sessionStorage and leaves the address bar. GET / itself never carries it.
+const TOKEN = (() => {
+  const fromHash = new URLSearchParams(location.hash.slice(1)).get("token")
+  if (fromHash) {
+    try { sessionStorage.setItem("guard-token", fromHash) } catch {}
+    history.replaceState(null, "", location.pathname + location.search)
+    return fromHash
+  }
+  try { return sessionStorage.getItem("guard-token") } catch { return null }
+})()
+const $ = (s) => document.querySelector(s)
+let config = null
+let currentTab = "overview"
+
+// Build DOM with text only. Decision content is attacker-controlled: never use innerHTML for it.
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag)
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") el.className = v
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v)
+    else el.setAttribute(k, v)
+  }
+  for (const c of children.flat()) if (c !== null && c !== undefined) el.append(c instanceof Node ? c : String(c))
+  return el
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { "content-type": "application/json", "x-guard-token": TOKEN, ...(opts.headers || {}) } })
+  const body = res.status === 204 ? null : await res.json()
+  if (!res.ok && res.status !== 202) throw new Error(body?.error || `HTTP ${res.status}`)
+  return body
+}
+
+function toast(message, kind = "") {
+  const t = h("div", { class: `toast ${kind}` }, message)
+  $("#toasts").append(t)
+  setTimeout(() => t.remove(), 5000)
+}
+
+const fmtTime = (ms) => new Date(ms).toLocaleString()
+const short = (s, n = 120) => (s && s.length > n ? s.slice(0, n - 1) + "…" : s || "")
+const resultOf = (r) => (r.action === "log" ? "would block" : r.final)
+const pillClass = (r) => (r.action === "log" ? "log" : r.final)
+const contentOf = (r) => {
+  if (r.args_json) return r.args_json
+  const ctx = JSON.parse(r.context_json)
+  return r.kind === "tool-output" ? ctx.output || "" : ctx.userPrompt || ""
+}
+
+// ── header ─────────────────────────────────────────────
+function renderConfig(c) {
+  config = c
+  for (const b of document.querySelectorAll("#mode button")) b.classList.toggle("on", b.dataset.mode === c.mode)
+  $("#threshold-text").textContent = `threshold ${c.threshold}`
+  for (const el of $("#settings").elements) {
+    if (!el.name) continue
+    const value = el.name.split(".").reduce((o, k) => o?.[k], c)
+    if (value !== undefined) el.value = String(value)
+  }
+}
+
+function renderLaya(ok) {
+  $("#laya-dot").className = "dot " + (ok === true ? "ok" : ok === false ? "down" : "")
+  $("#laya-text").textContent = ok === true ? "LAYA ready" : ok === false ? "LAYA down" : "LAYA: unknown"
+  const banner = $("#banner")
+  banner.hidden = ok !== false
+  if (ok === false) banner.textContent = `LAYA is not reachable at ${config?.laya.url}. Checks are ${config?.failOpen ? "allowed (fail open)" : "blocked (fail closed)"} until it is back.`
+}
+
+for (const b of document.querySelectorAll("#mode button")) {
+  b.addEventListener("click", async () => {
+    try {
+      renderConfig(await api("/api/config", { method: "PUT", body: JSON.stringify({ mode: b.dataset.mode }) }))
+      toast(`Mode set to ${b.dataset.mode}`)
+    } catch (e) { toast(e.message, "error") }
+  })
+}
+
+// ── tabs ───────────────────────────────────────────────
+for (const b of document.querySelectorAll("nav button")) b.addEventListener("click", () => showTab(b.dataset.tab))
+function showTab(tab) {
+  currentTab = tab
+  for (const b of document.querySelectorAll("nav button")) b.classList.toggle("on", b.dataset.tab === tab)
+  for (const s of document.querySelectorAll("main section")) s.hidden = s.id !== `tab-${tab}`
+  refresh()
+}
+function refresh() {
+  if (currentTab === "overview") loadOverview()
+  if (currentTab === "log") loadLog()
+  loadPending()
+}
+
+// ── overview ───────────────────────────────────────────
+async function loadOverview() {
+  try {
+    const data = await api(`/api/overview?range=${$("#range").value}`)
+    const s = data.stats
+    $("#k-checked").textContent = s.checked
+    $("#k-blocked").textContent = s.blocked
+    $("#k-rate").textContent = (s.blockRate * 100).toFixed(1) + "%"
+    $("#k-would").textContent = s.wouldBlock
+    $("#k-fp").textContent = s.falsePositives
+    // Server-rendered SVG; every label inside is escaped by charts.ts.
+    $("#c-series").innerHTML = data.charts.series
+    $("#c-type").innerHTML = data.charts.byAttackType
+    $("#c-tool").innerHTML = data.charts.byTool
+  } catch (e) { toast(e.message, "error") }
+}
+$("#range").addEventListener("change", loadOverview)
+for (const b of document.querySelectorAll("[data-export]")) {
+  b.addEventListener("click", () => {
+    const a = h("a", { href: `/api/export?format=${b.dataset.export}&range=${$("#export-range").value}&token=${TOKEN}` })
+    document.body.append(a); a.click(); a.remove()
+  })
+}
+
+// ── pending ────────────────────────────────────────────
+async function decide(id, outcome) {
+  try {
+    await api(`/api/decisions/${id}/decide`, { method: "POST", body: JSON.stringify({ outcome, by: "dashboard" }) })
+    toast(`${id} ${outcome === "allow" ? "allowed" : "blocked"}`)
+  } catch (e) { toast(e.message, "error") }
+  refresh()
+}
+
+let countdownTimer = null
+async function loadPending() {
+  let rows
+  try { rows = await api("/api/decisions?final=pending&limit=100") } catch (e) { return toast(e.message, "error") }
+  const badge = $("#pending-badge")
+  badge.hidden = rows.length === 0
+  badge.textContent = rows.length
+  document.title = rows.length ? `(${rows.length}) Secure Guard` : "Secure Guard"
+  $("#pending-empty").hidden = rows.length > 0
+  const list = $("#pending-list")
+  list.replaceChildren(...rows.map((r) =>
+    h("div", { class: "card pending-item" },
+      h("div", { class: "row spread" },
+        h("strong", {}, `${r.kind}${r.tool ? " · " + r.tool : ""}`),
+        h("span", { class: "muted", "data-expires": r.expires_at ?? "" }, "")),
+      h("div", { class: "muted" }, `${r.reason} · session ${r.session_id} · id ${r.id}`),
+      h("pre", {}, short(contentOf(r), 1200)),
+      h("div", { class: "row" },
+        h("button", { class: "btn allow", onclick: () => decide(r.id, "allow") }, "Allow"),
+        h("button", { class: "btn block", onclick: () => decide(r.id, "block") }, "Block"),
+        h("button", { class: "btn", onclick: () => openDrawer(r.id) }, "Details")))))
+  clearInterval(countdownTimer)
+  const tick = () => {
+    for (const el of document.querySelectorAll("[data-expires]")) {
+      const left = Math.max(0, Math.round((Number(el.dataset.expires) - Date.now()) / 1000))
+      el.textContent = el.dataset.expires ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} left, then ${config?.askTimeoutDefault ?? "block"}` : ""
+    }
+  }
+  tick()
+  countdownTimer = setInterval(tick, 1000)
+}
+
+// ── log ────────────────────────────────────────────────
+async function loadLog() {
+  const params = new URLSearchParams()
+  for (const [k, v] of new FormData($("#filters"))) if (v) params.set(k, v)
+  params.set("limit", "300")
+  let rows
+  try { rows = await api(`/api/decisions?${params}`) } catch (e) { return toast(e.message, "error") }
+  $("#log-body").replaceChildren(...rows.map((r) =>
+    h("tr", { onclick: () => openDrawer(r.id) },
+      h("td", {}, fmtTime(r.created_at)),
+      h("td", {}, r.kind),
+      h("td", {}, r.tool ?? ""),
+      h("td", {}, r.attack_type ?? ""),
+      h("td", {}, r.risk === null ? "–" : r.risk.toFixed(2)),
+      h("td", {}, h("span", { class: `pill ${pillClass(r)}` }, resultOf(r) + (r.false_positive ? " · FP" : ""))),
+      h("td", {}, r.decided_by),
+      h("td", { class: "wrap" }, short(contentOf(r), 80)))))
+}
+$("#filters").addEventListener("submit", (e) => { e.preventDefault(); loadLog() })
+
+// ── drawer ─────────────────────────────────────────────
+let openDrawerId = null // re-rendered when a live update for it arrives
+async function openDrawer(id) {
+  openDrawerId = id
+  let r
+  try { r = await api(`/api/decisions/${id}`) } catch (e) { openDrawerId = null; return toast(e.message, "error") }
+  if (openDrawerId !== id) return // closed, or another decision opened, while this one loaded
+  const flagged = r.final === "blocked" || r.final === "redacted" || r.action === "log"
+  const ctx = JSON.parse(r.context_json)
+  $("#d-title").textContent = `${r.kind}${r.tool ? " · " + r.tool : ""} · ${resultOf(r)}`
+  $("#d-body").replaceChildren(h("div", {},
+    h("p", { class: "muted" }, `${fmtTime(r.created_at)} · id ${r.id} · session ${r.session_id} · mode ${r.mode} · decided by ${r.decided_by}${r.truncated ? " · input truncated" : ""}${r.laya_ms !== null ? ` · LAYA ${r.laya_ms} ms` : ""}`),
+    h("p", {}, r.reason),
+    r.args_json ? [h("strong", {}, "Arguments"), h("pre", {}, JSON.stringify(JSON.parse(r.args_json), null, 2))] : null,
+    ctx.userPrompt ? [h("strong", {}, "User prompt"), h("pre", {}, ctx.userPrompt)] : null,
+    ctx.reasoning ? [h("strong", {}, "Reasoning"), h("pre", {}, ctx.reasoning)] : null,
+    ctx.output ? [h("strong", {}, "Tool output"), h("pre", {}, ctx.output)] : null,
+    ctx.history?.length ? [h("strong", {}, "Recent turns"), h("pre", {}, ctx.history.map((t) => `${t.role}: ${t.text}`).join("\n\n"))] : null,
+    r.answers_json ? [h("strong", {}, "LAYA answers"), h("pre", {}, JSON.stringify(JSON.parse(r.answers_json), null, 2))] : null,
+    h("div", { class: "row" },
+      r.final === "pending" ? [
+        h("button", { class: "btn allow", onclick: async () => { await decide(r.id, "allow"); openDrawer(r.id) } }, "Allow"),
+        h("button", { class: "btn block", onclick: async () => { await decide(r.id, "block"); openDrawer(r.id) } }, "Block"),
+      ] : null,
+      flagged ? h("button", { class: "btn", onclick: () => markFp(r.id, !r.false_positive) }, r.false_positive ? "Undo false positive" : "Mark as false positive") : null)))
+  $("#drawer").hidden = false
+}
+async function markFp(id, value) {
+  try {
+    await api(`/api/decisions/${id}/false-positive`, { method: "POST", body: JSON.stringify({ value }) })
+    toast(value ? "Marked as false positive. It will train as 'allow'." : "False positive mark removed")
+    openDrawer(id)
+    refresh()
+  } catch (e) { toast(e.message, "error") }
+}
+function closeDrawer() {
+  $("#drawer").hidden = true
+  openDrawerId = null
+}
+$("#d-close").addEventListener("click", closeDrawer)
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer() })
+
+// ── settings ───────────────────────────────────────────
+$("#settings").addEventListener("submit", async (e) => {
+  e.preventDefault()
+  const patch = { laya: {} }
+  for (const el of e.target.elements) {
+    if (!el.name) continue
+    let v = el.value
+    if (el.type === "number") v = Number(v)
+    if (v === "true" || v === "false") v = v === "true"
+    if (el.name.startsWith("laya.")) patch.laya[el.name.slice(5)] = v
+    else patch[el.name] = v
+  }
+  try { renderConfig(await api("/api/config", { method: "PUT", body: JSON.stringify(patch) })); toast("Settings saved") }
+  catch (err) { toast(err.message, "error") }
+})
+
+// ── live updates ───────────────────────────────────────
+function connect() {
+  const es = new EventSource(`/events?token=${TOKEN}`)
+  es.addEventListener("decision", (e) => {
+    const { row } = JSON.parse(e.data)
+    if (row.final === "pending") toast(`Needs approval: ${row.kind}${row.tool ? " · " + row.tool : ""}`)
+    if (row.id === openDrawerId) openDrawer(row.id)
+    refresh()
+  })
+  es.addEventListener("config", (e) => renderConfig(JSON.parse(e.data).config))
+  es.addEventListener("laya", (e) => renderLaya(JSON.parse(e.data).ok))
+  es.onerror = () => { renderLaya(null); $("#laya-text").textContent = "scanner offline, reconnecting…" }
+}
+
+;(async () => {
+  if (!TOKEN) {
+    document.body.replaceChildren(h("p", { class: "no-token" }, "Open the dashboard from OpenCode (/guard-dashboard) or the link printed by bun run start."))
+    return
+  }
+  try {
+    renderConfig(await api("/api/config"))
+    renderLaya((await api("/api/status")).laya.ok)
+  } catch (e) { toast(e.message, "error") }
+  connect()
+  refresh()
+})()
+</script>
+</body>
+</html>
