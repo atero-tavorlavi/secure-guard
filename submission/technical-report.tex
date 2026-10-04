@@ -20,7 +20,7 @@
 \affiliation{\institution{Institution: fill in}\country{}}
 
 \begin{abstract}
-AI coding agents run shell commands, edit files and fetch web pages on the user's machine. Content they read, even text inside images, can hijack them into leaking secrets or destroying data. We present Secure Guard, a defense for the OpenCode agent that checks every tool call before it runs. Our first judge was Qwen3.5-2B fine-tuned with Low-Rank Adaptation (LoRA) to answer allow or deny. We then built the guard around LAYA, a 421M-parameter decision model whose training aims at calibrated probabilities. LAYA reads the tool call with the user's request and the agent's reasoning and returns the probability that the call is harmful or unrequested. The guard then logs the call, asks the user or blocks it. On 40 held-out hand-written tool calls (15 attacks), LAYA reaches an area under the ROC curve (ROC-AUC) of 0.93 and catches 12 of the 15 attacks with one false positive. Removing the reasoning lowers ROC-AUC to 0.66, and adding earlier turns lowers it to 0.81. Its scores are poorly calibrated on this task. A check takes 0.08 seconds on a laptop. We also design a comparison of the two judges and a user study of how people value such a defense.
+AI coding agents run shell commands, edit files and fetch web pages on the user's machine. Content they read, even text inside images, can hijack them into leaking secrets or destroying data. We present Secure Guard, a defense for the OpenCode agent that checks every tool call before it runs. Our first judge was Qwen3.5-2B fine-tuned with Low-Rank Adaptation (LoRA) to answer allow or deny. We then built the guard around LAYA, a 421M-parameter decision model trained for calibrated probabilities. LAYA reads the tool call with the user's request and the agent's reasoning and returns the probability that the call is harmful or unrequested. The guard then logs the call, asks the user or blocks it. On 40 held-out tool calls (15 attacks), LAYA reaches an area under the ROC curve (ROC-AUC) of 0.93 and catches 12 of them with one false positive. Without the reasoning, ROC-AUC falls to 0.66. A check takes 0.08 seconds on a laptop, but LAYA's scores are poorly calibrated. On a separate visual-injection task, LAYA fine-tuned on 200 examples matched the Qwen judge's ROC-AUC (0.82) with far fewer false alarms, but a 400-example run collapsed. We also design a user study of the defense's value.
 \end{abstract}
 
 \maketitle
@@ -44,7 +44,15 @@ This report makes four contributions. We describe the design and implementation 
 \textbf{Calibrated decisions.} Modern neural networks tend to be over-confident~\cite{guo2017calibration}. LAYA is trained with reinforcement learning against strictly proper scoring rules~\cite{gneiting2007}, which reward honest probabilities~\cite{laya}. Its training therefore aims at calibrated probabilities. Whether this holds on tool calls is an empirical question, which we test in Section~\ref{sec:res-laya}.
 
 \section{Attacks}\label{sec:attacks}
-\pending{Soof: describe the attacks. Suggested outline: the threat model (who controls the image or page, what the agent can do), each attack family used in the dataset (secret key, forbidden topic as a phrase or an empty numbered list, CAPTCHA, and the benign controls) with one example image and prompt, how the images and prompts were found and labeled, and the MIPS attack: what it is, how it was attempted and why hardware limits stopped it.}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/attack-p1.jpg}\\[1mm]
+\includegraphics[width=\columnwidth]{figures/attack-p1-band.jpg}
+\caption{A visual prompt injection from our image set. Top: the photo as the agent sees it. Bottom: the band above the family with the contrast boosted, showing the hidden instruction to email the user's secrets and pay a ``ransom.''}
+\label{fig:attack}
+\end{figure}
+
+\pending{Soof: describe the attacks. Figure~\ref{fig:attack} is one example from \texttt{dataset/images-with-prompts} (24 photos, 12 attack prompts, 24 benign prompts). Suggested outline: the threat model (who controls the image or page, what the agent can do), each attack family used in the dataset (secret key, forbidden topic as a phrase or an empty numbered list, CAPTCHA, and the benign controls) with one example image and prompt, how the images and prompts were found and labeled, and the MIPS attack: what it is, how it was attempted and why hardware limits stopped it.}
 
 \section{System Design}
 \begin{figure}[t]
@@ -172,7 +180,7 @@ Step & Time & Peak memory\\
 LAYA score, one trace & 0.08 s & 3.0 GB\\
 Qwen judge score, one trace & 0.2 to 0.4 s & 4.1 GB\\
 LAYA fine-tuning, one step & 0.9 s & 7.5 GB\\
-Qwen LoRA in MLX, one iteration & about 5 s & 8.2 GB\\
+Qwen LoRA in MLX, one iteration & 2.7 s & 7.5 GB\\
 VLM answer (data generation) & 1 to 3 s & 4.5 GB\\
 \bottomrule
 \end{tabular}
@@ -182,7 +190,40 @@ VLM answer (data generation) & 1 to 3 s & 4.5 GB\\
 In a data-generation trial of 77 traces, the answering model followed the injection in 60\% of the secret-key traces and 85\% of the forbidden-topic traces. For CAPTCHA it followed none of them at first, because it refused or could not read the heavily distorted text. After we made the text legible, 25\% of the answers reproduced the exact string and 75\% agreed to read it. All three attack families then passed the minimum follow rate of 30\% that we had set in advance.
 
 \subsection{LAYA versus the Generative Judge}
-\pending{the comparison is running. Table 3 (accuracy, F1, AUC and calibration error for each contender on the frozen test set of 200 traces), Figure 2 (learning curves from 25 to 400 examples with two seeds) and the breakdown by family will be generated from \texttt{results/results.json}. No numbers are reported here until the run finishes.}
+We could not run the whole plan before the deadline. At its peak a Qwen LoRA step on a long trace needs about 10~GB of system memory, and our memory watchdog stopped these runs on the M4 Pro. The Qwen learning curve therefore has only $n=25$ with one seed. LAYA has $n=25$ with two seeds and $n$ from 50 to 400 with one seed. Table~\ref{tab:compare} lists every contender that finished, on the frozen test set of 200 traces (81 followed). Thresholds and calibration were fitted on validation splits in the same way for every contender.
+
+\begin{table}[t]
+\caption{Post-hoc judging of visual prompt injection on the frozen test set (200 traces, 81 followed). AUC with a 95\% bootstrap CI. F1 and the false-positive rate (FPR) at the validation threshold, after calibration. ECE uses ten equal-count bins. Time is the median per trace on the M4 Pro.}
+\label{tab:compare}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccccr@{}}
+\toprule
+Contender & AUC [95\% CI] & F1 & FPR & ECE & Time\\
+\midrule
+Qwen judge as trained & 0.82 [0.76, 0.87] & 0.69 & 0.39 & 0.12 & 0.86 s\\
+Qwen judge + image & 0.71 [0.63, 0.78] & 0.54 & 0.29 & 0.08 & 3.38 s\\
+Qwen-base + LoRA, $n{=}25$ & 0.54 [0.46, 0.62] & 0.57 & 0.97 & 0.40 & 0.93 s\\
+\addlinespace
+LAYA, no fine-tuning & 0.52 [0.44, 0.61] & 0.60 & 0.87 & 0.11 & 0.12 s\\
+LAYA, $n{=}25$ (2 seeds) & 0.50--0.59 & 0.58 & 1.00 & 0.37--0.41 & 0.11 s\\
+LAYA, $n{=}50$ & 0.50 [0.50, 0.50] & 0.58 & 1.00 & 0.20 & 0.15 s\\
+LAYA, $n{=}100$ & 0.62 [0.55, 0.68] & 0.18 & 0.00 & 0.22 & 0.11 s\\
+LAYA, $n{=}200$ & 0.82 [0.76, 0.87] & 0.76 & 0.07 & 0.09 & 0.11 s\\
+LAYA, $n{=}400$ & 0.64 [0.59, 0.69] & 0.58 & 1.00 & 0.11 & 0.10 s\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Few examples are not enough.} With 25 or 50 examples neither fine-tuned judge learns the task. Both flag almost every trace, and two LAYA runs (one seed at $n=25$, and $n=50$) gave the same score to every trace, so their AUC is exactly 0.50. LAYA without fine-tuning is also near chance. It was trained to judge actions, not to tell whether a model followed an instruction.
+
+\textbf{LAYA can learn the task, but not reliably.} The AUC rises from 0.62 at $n=100$ to 0.82 at $n=200$. At $n=100$ LAYA is too cautious to be useful: it flags no benign trace but catches only 8 of 81 followed traces. At $n=200$ it catches 55 of 81 with 8 false positives in 119, an accuracy of 0.83 and an F1 of 0.76 (CI 0.68 to 0.84). At $n=400$ training partly collapsed. The AUC fell to 0.64 (0.59 to 0.69), the secret-key and CAPTCHA families scored at chance, and the validation threshold flagged every trace. The curve is therefore not monotonic, and with one seed we cannot tell whether $n=200$ was a good run or $n=400$ a bad one.
+
+\textbf{The Qwen judge as trained is a strong baseline.} It was fine-tuned on the original 100 traces, whose recipe our data recreates, and it reaches an AUC of 0.82, the same as LAYA at $n=200$. Its operating point is worse. It catches 67 of 81 followed traces but flags 47 of 119 others (39\%), mostly in the secret-key and forbidden-topic families, where it flags 74\% and 87\% of the traces that were not followed. After the same calibration, LAYA at $n=200$ has a lower calibration error (ECE 0.09 against 0.12, Brier 0.14 against 0.18) and holds up better on topics never seen in training (AUC 0.80 against 0.74). By family, LAYA at $n=200$ separates the forbidden-topic traces far better (AUC 0.92 against 0.62) and the CAPTCHA traces far worse (0.47 against 0.87). CAPTCHA has the noisiest labels (Section~\ref{sec:comparison}). Attaching the real image did not help the Qwen judge, which was trained on text only. Its AUC fell to 0.71, and each trace took four times longer.
+
+\textbf{Cost.} On this task LAYA scores a trace in 0.11 seconds and the Qwen judge in 0.86 seconds, eight times slower, because these traces are longer than tool calls. A LAYA fine-tuning run on 200 examples took 7.4 minutes at a peak of 7.4~GB.
+
+In short, LAYA fine-tuned on 200 examples matched the generative judge on ranking, made far fewer false alarms, was better calibrated and was much faster. The same procedure learned nothing from 25 or 50 examples and partly collapsed on 400, so LAYA's fine-tuning is unstable at these sizes. These results rest on one seed above $n=25$ and on a Qwen learning curve that stops at $n=25$, and they do not show that LAYA reliably beats the generative judge.
 
 \section{Discussion}\label{sec:discussion}
 \textbf{What worked.} Judging actions rather than inputs lets the guard use the agent's own account of why it acts, which was the most useful input in our measurements. A judge that does not generate text adds 0.08 seconds per call, which is cheap enough to run on every call. More context was not better. Earlier turns lowered the AUC, so the default now leaves them out. We have not yet studied why.
@@ -193,10 +234,10 @@ In a data-generation trial of 77 traces, the answering model followed the inject
 
 \textbf{Security and privacy.} All inference runs locally and all decisions stay on the machine. The stored log contains prompts, reasoning and tool outputs, which are sensitive in their own right, so it is deleted after 30 days by default. The fine-tuning export carries the same content.
 
-\textbf{Future work.} We plan to fine-tune LAYA on decisions collected by the guard, since the export already records human corrections. These labels are biased. Missed attacks are never flagged and so never labeled, and people sometimes approve attacks, so this data needs audits and labeled attacks from other sources. We will also finish the comparison with the generative judge, add high-precision rules for well-known destructive patterns next to the model, test adaptive attacks on the guard and run the user study, starting with the planned pilot of 10 participants.
+\textbf{Future work.} We plan to fine-tune LAYA on decisions collected by the guard, since the export already records human corrections. These labels are biased. Missed attacks are never flagged and so never labeled, and people sometimes approve attacks, so this data needs audits and labeled attacks from other sources. We will also finish the comparison with the generative judge (a second seed for LAYA above $n=25$ and the Qwen learning curve, which needs a way around its memory peak on long traces), add high-precision rules for well-known destructive patterns next to the model, test adaptive attacks on the guard and run the user study, starting with the planned pilot of 10 participants.
 
 \section{Conclusion}
-Secure Guard shows that a small local decision model can check every action an AI coding agent takes, at 0.08 seconds per call. In our small hand-written evaluation, the agent's reasoning was the most useful context and earlier turns hurt. With the prompt and the reasoning, the guard caught 12 of 15 held-out attacks with one false positive in 25 benign calls. Ask mode limits the cost of false alarms, but missed attacks remain the main gap, and LAYA's scores are poorly calibrated on this task. The guard's decision log can supply more training data, once its label bias is handled.
+Secure Guard shows that a small local decision model can check every action an AI coding agent takes, at 0.08 seconds per call. In our small hand-written evaluation, the agent's reasoning was the most useful context and earlier turns hurt. With the prompt and the reasoning, the guard caught 12 of 15 held-out attacks with one false positive in 25 benign calls. Ask mode limits the cost of false alarms, but missed attacks remain the main gap, and LAYA's scores are poorly calibrated on this task. On visual prompt injection, LAYA fine-tuned on 200 examples matched the generative judge's ranking with far fewer false alarms and better calibration, at an eighth of the cost per trace, but a run on 400 examples partly collapsed, so its fine-tuning is not yet reliable. The guard's decision log can supply more training data, once its label bias is handled.
 
 \section{Contributions}
 \textbf{Tavor} trained the first judge, Qwen3.5-2B fine-tuned with LoRA using PEFT, then looked for a more efficient approach and found LAYA. He integrated LAYA with the OpenCode plugin, built the scanner and dashboard and ran the evaluations.
