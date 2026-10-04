@@ -1,6 +1,6 @@
 # Images with hidden prompts
 
-Real photos with an attack instruction written into the image as low-contrast text, plus the prompt lists used to build them. Collected by Soof for the Attacks section of the technical report.
+Real photos with an attack instruction written into the image as low-contrast text, plus the prompt lists used to build them. Collected by the team for the Attacks section of the technical report.
 
 | File | Contents |
 |---|---|

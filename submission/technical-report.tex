@@ -242,8 +242,8 @@ Secure Guard shows that a small local decision model can check every action an A
 \section{Contributions}
 \textbf{Tavor} trained the first judge, Qwen3.5-2B fine-tuned with LoRA using PEFT, then looked for a more efficient approach and found LAYA. He integrated LAYA with the OpenCode plugin, built the scanner and dashboard and ran the evaluations.
 \textbf{Yahli} created the OpenCode plugin, including exporting the user's prompt and the agent's reasoning trace to the scanner.
-\textbf{Soof} created the training dataset by finding images and prompts and labeling them by hand. He also worked on a MIPS attack, which could not be completed because of hardware limitations.
-\textbf{Reut} designed the user-study protocol.
+\textbf{Soof and Reut} created the training dataset by finding images and prompts and labeling them by hand. They also reviewed related prior research and set up the students' academic GPU server. \textbf{Soof} also worked on a MIPS attack, which could not be completed because of hardware limitations.
+\textbf{Reut} also designed the user-study protocol and set up an AWS account, which was not used because the budget was no longer available.
 
 \section{LLM Statement}
 We used several AI tools during the project: Claude (through Claude Code), Gemini and Antigravity. We did our own research and made the decisions ourselves, including the threat model, the choice of LAYA over a generative judge, the system design and the evaluation. We used AI mostly to implement code and to help with writing this report and the user-study protocol. For the code, AI agents implemented each planned task test-first, and a separate AI review pass checked it. For the evaluation, AI helped write the scoring scripts. All numbers in this report come from our own logged runs.
