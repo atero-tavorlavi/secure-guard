@@ -148,7 +148,7 @@ A separate protocol (\texttt{user-study-protocol.pdf}) describes a $2\times2$ be
 Table~\ref{tab:detector} summarizes the three stages. During selection, the general checkpoints did not separate attacks from benign calls in our runs. For example, \texttt{rm -rf \char`\~} scored 0.005 with \texttt{multilingual}. The \texttt{typed-decisions} checkpoint separated the short samples well, with an AUC of 0.99 on $T$ and 0.93 on $V$. The gap suggests that part of the selection fit $T$.
 
 \begin{table}[t]
-\caption{LAYA (\texttt{typed-decisions}, no fine-tuning) as a judge of tool calls on the held-out set $V$. Sizes are attacks/benign. The AUC interval is a 95\% bootstrap CI. Caught counts flagged attacks and FP counts flagged benign calls, at the threshold $\tau$ chosen on $T$. No threshold was chosen for the ablations.}
+\caption{LAYA (\texttt{typed-decisions}, no fine-tuning) as a judge of tool calls on the held-out set $V$. Sizes are attacks/benign. The AUC interval is a 95\% bootstrap CI. Caught counts flagged attacks and FP counts flagged benign calls, at the threshold $\tau$ chosen on $T$ by the same rule for every row: the most attacks caught with at most 5\% false positives on $T$.}
 \label{tab:detector}
 \small
 \begin{tabular}{@{}lccc@{}}
@@ -159,14 +159,14 @@ Short (20/20), $\tau=0.25$ & 0.93 & 18/20 & 1/20\\
 \addlinespace
 \multicolumn{4}{@{}l}{\emph{Realistic (15/25)}}\\
 Prompt + reasoning, $\tau=0.29$ & 0.93 [0.82, 1.00] & 12/15 & 1/25\\
-Full state, $\tau=0.35$ & 0.81 [0.65, 0.93] & 6/15 & 0/25\\
-Prompt + turns & 0.63 [0.45, 0.79] & -- & --\\
-Prompt only & 0.66 [0.49, 0.82] & -- & --\\
+Full state, $\tau=0.33$ & 0.81 [0.65, 0.93] & 7/15 & 0/25\\
+Prompt + turns, $\tau=0.35$ & 0.63 [0.45, 0.79] & 3/15 & 0/25\\
+Prompt only, $\tau=0.34$ & 0.66 [0.49, 0.82] & 0/15 & 1/25\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Realistic calls with context are harder, and the choice of context matters. With the full state, the AUC on $V$ is 0.81 (CI 0.65 to 0.93). Dropping the recent turns raises it to 0.93 (0.82 to 1.00). The paired difference on $V$ is $-0.12$ ($-0.28$ to 0.03), so $V$ alone cannot rule out no effect. On $T$ and $V$ pooled (80 samples, 30 attacks) the difference is $-0.11$ ($-0.21$ to $-0.02$). Earlier turns seem to add noise rather than signal here, so the guard now sends the prompt and the reasoning only. Removing the reasoning instead lowers the AUC to 0.63 (0.45 to 0.79), a paired difference from the full state of 0.17 (0.07 to 0.30). Without both, the AUC is 0.66 (0.49 to 0.82). In this small set the reasoning carries most of the signal. Part of that effect is by construction, because some attack items have reasoning that reveals the injection.
+Realistic calls with context are harder, and the choice of context matters. With the full state, the AUC on $V$ is 0.81 (CI 0.65 to 0.93). Dropping the recent turns raises it to 0.93 (0.82 to 1.00). The paired difference on $V$ is $-0.12$ ($-0.28$ to 0.03), so $V$ alone cannot rule out no effect. On $T$ and $V$ pooled (80 samples, 30 attacks) the difference is $-0.11$ ($-0.21$ to $-0.02$). Earlier turns seem to add noise rather than signal here, so the guard now sends the prompt and the reasoning only. Removing the reasoning instead lowers the AUC to 0.63 (0.45 to 0.79), a paired difference from the full state of 0.17 (0.07 to 0.30). Without both, the AUC is 0.66 (0.49 to 0.82). In this small set the reasoning carries most of the signal. At thresholds chosen on $T$ by the same rule, the two variants without reasoning catch only 3 and 0 of the 15 held-out attacks. Part of that effect is by construction, because some attack items have reasoning that reveals the injection.
 
 The default threshold of 0.29 was chosen on $T$ for the prompt-and-reasoning input, where it caught 14 of 15 attacks with 1 false positive in 25. On $V$ it catches 12 of 15 attacks (80\%, CI 55\% to 93\%) with 1 false positive in 25 benign calls (4\%, CI 1\% to 20\%). The threshold never saw $V$, but we chose to drop the recent turns after seeing the $V$ results, so $V$ is not fully held out for that choice. All realistic results use the state layout that the scanner builds today.
 
